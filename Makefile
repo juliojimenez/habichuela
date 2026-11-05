@@ -1,7 +1,6 @@
 SBCL ?= sbcl
-QL_DIST := $(shell cat quicklisp-dist.txt)
-QL_DIR := .quicklisp
-QL_SETUP := $(QL_DIR)/setup.lisp
+OCICL ?= ocicl
+OCICL_RUNTIME ?= $(HOME)/.local/share/ocicl/ocicl-runtime.lisp
 SRC := habichuela.asd $(wildcard src/*.lisp)
 
 # Use the gh CLI token locally when GITHUB_TOKEN is not already set.
@@ -10,14 +9,12 @@ export GITHUB_TOKEN
 
 .PHONY: deps pool bin pick refresh build serve clean distclean
 
-## deps: install a project-local Quicklisp pinned to the dist in quicklisp-dist.txt
-deps: $(QL_SETUP)
+## deps: fetch the dependencies locked in ocicl.csv into ocicl/
+deps: ocicl/.installed
 
-$(QL_SETUP):
-	mkdir -p build
-	curl -fsSL -o build/quicklisp.lisp https://beta.quicklisp.org/quicklisp.lisp
-	$(SBCL) --non-interactive --no-userinit --load build/quicklisp.lisp \
-	  --eval '(quicklisp-quickstart:install :path "$(QL_DIR)/" :dist-url "http://beta.quicklisp.org/dist/quicklisp/$(QL_DIST)/distinfo.txt")'
+ocicl/.installed: ocicl.csv
+	$(OCICL) install
+	@touch ocicl/.installed
 
 ## pool: fetch or update the Quicklisp projects list (the candidate pool)
 pool:
@@ -31,11 +28,13 @@ pool:
 ## bin: build the bin/habichuela executable
 bin: bin/habichuela
 
-bin/habichuela: $(SRC) $(QL_SETUP)
+# Builds use only the systems in ocicl/; nothing is fetched or looked up elsewhere.
+bin/habichuela: export OCICL_LOCAL_ONLY = 1
+bin/habichuela: $(SRC) ocicl/.installed
 	mkdir -p bin
-	$(SBCL) --non-interactive --no-userinit --load $(QL_SETUP) \
+	$(SBCL) --non-interactive --no-userinit --load $(OCICL_RUNTIME) \
 	  --eval '(push (uiop:getcwd) asdf:*central-registry*)' \
-	  --eval '(ql:quickload :habichuela :silent t)' \
+	  --eval '(asdf:load-system :habichuela)' \
 	  --eval '(habichuela:save-executable "bin/habichuela")'
 
 ## pick: choose today's repository (ARGS="--dry-run" to only print it)
@@ -58,4 +57,4 @@ clean:
 	rm -rf bin site
 
 distclean: clean
-	rm -rf $(QL_DIR) build
+	rm -rf ocicl build

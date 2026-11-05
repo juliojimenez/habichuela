@@ -20,44 +20,55 @@ concurrency:
   group: daily
   cancel-in-progress: false
 
+env:
+  OCICL_VERSION: "2.20.0"
+  OCICL_SHA256: "9fef518f8c20b12ce63ca6103d6224019e9b0a546ead5fc3f9a85e75b9d74050"
+
 jobs:
-  daily:
+  build:
     runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deploy.outputs.page_url }}
     env:
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       # Optional. A gitlab.com token with read_api unlocks archived, mirror and issue counts.
       GITLAB_TOKEN: ${{ secrets.GITLAB_TOKEN }}
       CODEBERG_TOKEN: ${{ secrets.CODEBERG_TOKEN }}
+      # Only the systems locked in ocicl.csv, nothing global.
+      OCICL_LOCAL_ONLY: "1"
     steps:
       - uses: actions/checkout@v4
-
-      - name: Read the Pages configuration (custom domain and base URL)
-        id: pages
-        uses: actions/configure-pages@v5
-        continue-on-error: true
 
       - name: Install SBCL
         run: |
           sudo apt-get update -q
           sudo apt-get install -y -q --no-install-recommends sbcl
 
-      - name: Cache Quicklisp and compiled files
+      - name: Install ocicl
+        run: |
+          curl -fsSL -o /tmp/ocicl.tgz "https://github.com/ocicl/ocicl/releases/download/v${OCICL_VERSION}/ocicl-${OCICL_VERSION}-linux-amd64.tar.gz"
+          echo "${OCICL_SHA256}  /tmp/ocicl.tgz" | sha256sum -c -
+          mkdir -p /tmp/ocicl-dist && tar xzf /tmp/ocicl.tgz -C /tmp/ocicl-dist
+          sudo install -m 0755 /tmp/ocicl-dist/ocicl /usr/local/bin/ocicl
+          ocicl setup
+
+      - name: Cache dependencies and compiled files
         uses: actions/cache@v4
         with:
           path: |
-            .quicklisp
+            ocicl
             ~/.cache/common-lisp
-          key: ql-${{ hashFiles('quicklisp-dist.txt') }}-${{ hashFiles('habichuela.asd', 'src/**') }}
+          key: ocicl-${{ hashFiles('ocicl.csv') }}-${{ hashFiles('habichuela.asd', 'src/**') }}
           restore-keys: |
-            ql-${{ hashFiles('quicklisp-dist.txt') }}-
+            ocicl-${{ hashFiles('ocicl.csv') }}-
+
+      - name: Read the Pages configuration (custom domain and base URL)
+        id: pages
+        uses: actions/configure-pages@v5
+        continue-on-error: true
 
       - name: Fetch the Quicklisp projects list
         run: make pool
 
-      - name: Build the habichuela binary
+      - name: Fetch dependencies and build the habichuela binary
         run: make bin
 
       - name: Pick the repository of the day
@@ -88,7 +99,14 @@ jobs:
         with:
           path: site
 
+  deploy:
+    needs: build
+    if: ${{ !inputs.dry_run }}
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
       - name: Deploy to GitHub Pages
-        if: ${{ !inputs.dry_run }}
         id: deploy
         uses: actions/deploy-pages@v4
