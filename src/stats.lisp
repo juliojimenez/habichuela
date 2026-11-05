@@ -62,18 +62,13 @@
          :test #'string=)
         #'string<))
 
-(defun license-file-p (paths)
-  "A top-level LICENSE or COPYING file exists, whatever its type."
-  (not (null (some (lambda (p) (and (not (find #\/ p))
-                                    (let ((n (lc p))) (or (starts-with "license" n) (starts-with "copying" n)))))
-                   paths))))
-
 (defun has-readme-p (paths)
   (not (null (some (lambda (p) (and (not (find #\/ p)) (starts-with "readme" (lc p)))) paths))))
 
 (defun build-snapshot (meta paths truncated &key ref date source picked-at quicklisp-project)
   "The record for a repository: META is normalized metadata from FETCH-META, PATHS its file listing."
-  (record "date" date
+  (multiple-value-bind (license license-from) (resolve-license ref meta paths)
+    (record "date" date
           "repo" (jget meta "full_name" (repo-ref-name ref))
           "forge" (forge-name (repo-ref-forge ref))
           "host" (repo-ref-host ref)
@@ -81,8 +76,8 @@
           "description" (json-or-null (let ((d (jget meta "description"))) (unless (blank-p d) d)))
           "homepage" (json-or-null (let ((h (jget meta "homepage"))) (unless (blank-p h) h)))
           "language" (json-or-null (jget meta "language"))
-          "license" (json-or-null (or (jget meta "license")
-                                      (and (license-file-p paths) "see repository")))
+          "license" (json-or-null license)
+          "license_from" (json-or-null license-from)
           "stars" (or (jget meta "stars") 0)
           "forks" (or (jget meta "forks") 0)
           "open_issues" (or (jget meta "open_issues") 0)
@@ -101,4 +96,4 @@
           "quicklisp_project" (json-or-null quicklisp-project)
           "source" (json-or-null source)
           "picked_at" (json-or-null picked-at)
-          "fetched_at" (now-iso)))
+          "fetched_at" (now-iso))))

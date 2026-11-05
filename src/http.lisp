@@ -72,3 +72,10 @@ other failures API-ERROR. Transport and server errors are retried twice."
                     (log-line "HTTP ~a for ~a, retrying" status url)
                     (sleep (* 3 attempt)))
                    (t (error 'api-error :status status :url url :body (body-snippet body)))))))
+
+(defun fetch-text (url &key (headers '(("User-Agent" . "habichuela"))))
+  "Body of URL for a 2xx response, NIL when it does not exist. Other failures signal API-ERROR."
+  (multiple-value-bind (body status) (http-get url headers)
+    (cond ((and status (<= 200 status 299)) body)
+          ((member status '(404 410 451)) nil)
+          (t (error 'api-error :status status :url url :body (body-snippet body))))))

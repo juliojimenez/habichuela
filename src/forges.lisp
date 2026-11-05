@@ -254,3 +254,21 @@ disabled, default_branch, topics (a list) and owner."
     (:github (github-tree ref branch))
     (:gitlab (gitlab-tree ref branch))
     (:codeberg (codeberg-tree ref branch))))
+
+;;; Raw files
+
+(defun url-encode-path (path)
+  "Percent-encode each segment of PATH, keeping the slashes."
+  (format nil "~{~a~^/~}" (mapcar #'url-encode (uiop:split-string path :separator "/"))))
+
+(defun raw-file-url (ref branch path)
+  "URL of the raw contents of PATH on BRANCH."
+  (let ((host (repo-ref-host ref))
+        (name (repo-ref-name ref)))
+    (ecase (repo-ref-forge ref)
+      (:github (format nil "https://raw.githubusercontent.com/~a/~a/~a"
+                       name (url-encode-path branch) (url-encode-path path)))
+      (:gitlab (format nil "https://~a/~a/-/raw/~a/~a"
+                       host name (url-encode-path branch) (url-encode-path path)))
+      (:codeberg (format nil "https://~a/~a/raw/branch/~a/~a"
+                         host name (url-encode-path branch) (url-encode-path path))))))
