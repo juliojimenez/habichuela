@@ -1,9 +1,7 @@
 (in-package #:habichuela)
 
-;;; HTTP for the forge APIs. Requests go through curl rather than a Lisp TLS
-;;; stack: cl+ssl, which every Lisp HTTP client uses, does not work with
-;;; OpenSSL 4 yet, and curl is present on every machine this runs on. Tokens
-;;; travel to curl in a config on stdin, so they never show in the process list.
+;;; HTTP for the forge APIs: dexador over pure-tls. TLS is pure Lisp, so no
+;;; OpenSSL version can break it; see habichuela.asd for how cl+ssl is kept out.
 
 (define-condition api-error (error)
   ((status :initarg :status :reader api-status :initform nil)
@@ -24,31 +22,22 @@
                  (write-char char out)
                  (format out "%~2,'0X" octet)))))
 
-(defun curl-config (url headers output-path)
-  "A curl config file. ~s quoting matches curl's double-quoted syntax."
-  (with-output-to-string (s)
-    (format s "url = ~s~%" url)
-    (format s "silent~%show-error~%location~%connect-timeout = 20~%max-time = 60~%")
-    (format s "output = ~s~%" (uiop:native-namestring output-path))
-    (format s "write-out = \"%{http_code}\"~%")
-    (dolist (h headers)
-      (format s "header = ~s~%" (format nil "~a: ~a" (car h) (cdr h))))))
+(defun body-text (body)
+  (cond ((null body) "")
+        ((stringp body) body)
+        (t (babel:octets-to-string body :encoding :utf-8 :errorp nil))))
 
 (defun http-get (url headers)
-  "GET URL. Returns (values body-string http-status). Signals API-ERROR when curl itself fails."
-  (uiop:with-temporary-file (:pathname body-path :prefix "habichuela-" :type "json")
-    (multiple-value-bind (out err code)
-        (uiop:run-program (list "curl" "--config" "-")
-                          :input (make-string-input-stream (curl-config url headers body-path))
-                          :output :string :error-output :string :ignore-error-status t)
-      (unless (zerop code)
-        (error 'api-error :url url
-                          :body (format nil "curl exit ~d: ~a" code
-                                        (string-trim '(#\Space #\Newline) err))))
-      (values (if (probe-file body-path)
-                  (uiop:read-file-string body-path :external-format :utf-8)
-                  "")
-              (parse-integer (string-trim '(#\Space #\Newline) out) :junk-allowed t)))))
+  "GET URL. Returns (values body-string http-status) for any HTTP answer, including
+4xx and 5xx. Transport and TLS failures signal API-ERROR."
+  (handler-case
+      (multiple-value-bind (body status)
+          (dex:get url :headers headers :connect-timeout 20 :read-timeout 60)
+        (values (body-text body) status))
+    (dex:http-request-failed (e)
+      (values (body-text (dex:response-body e)) (dex:response-status e)))
+    (error (e)
+      (error 'api-error :url url :body (format nil "~a" e)))))
 
 (defun body-snippet (body)
   (when (and (stringp body) (plusp (length body)))

@@ -92,6 +92,11 @@ workflow installs a pinned ocicl release, verifies its checksum, and builds in
 local-only mode so nothing outside the lockfile is used. To upgrade, run
 `ocicl latest` and commit the new `ocicl.csv`.
 
+HTTP goes through dexador over [pure-tls](https://github.com/atgreen/pure-tls), a
+TLS 1.3 implementation in Common Lisp, so the program has no OpenSSL dependency
+at all. dexador asks for cl+ssl; `habichuela.asd` loads pure-tls's
+cl+ssl-compatible layer first and marks cl+ssl as already provided.
+
 ## Site
 
 `static/` is copied into the site as is. `static/bean.png` is the logo,
@@ -153,10 +158,6 @@ could read reads "see repository".
 - Without a `GITLAB_TOKEN`, GitLab's API hides the archived flag, the mirror
   flag and the open issue count; those read as false and 0.
 - GitHub's cron is best effort: the daily run can start late.
-- HTTP requests go through curl, driven from Lisp, instead of a Lisp HTTP client.
-  Every Lisp client depends on cl+ssl, which does not work with OpenSSL 4,
-  Homebrew's default `openssl` since late 2026. The whole HTTP layer is one
-  function in `src/http.lisp`, so swapping it back later is easy.
 
 ## License
 
