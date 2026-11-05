@@ -1,0 +1,85 @@
+name: daily
+
+on:
+  schedule:
+    # 14:17 UTC every day. GitHub's cron drifts by minutes, sometimes longer, at busy times.
+    - cron: "17 14 * * *"
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Pick and build, but do not commit data or deploy"
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: daily
+  cancel-in-progress: false
+
+jobs:
+  daily:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    env:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      HABICHUELA_BASE_URL: https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install SBCL
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -y -q --no-install-recommends sbcl
+
+      - name: Cache Quicklisp and compiled files
+        uses: actions/cache@v4
+        with:
+          path: |
+            .quicklisp
+            ~/.cache/common-lisp
+          key: ql-${{ hashFiles('quicklisp-dist.txt') }}-${{ hashFiles('habichuela.asd', 'src/**') }}
+          restore-keys: |
+            ql-${{ hashFiles('quicklisp-dist.txt') }}-
+
+      - name: Fetch the Quicklisp projects list
+        run: make pool
+
+      - name: Build the habichuela binary
+        run: make bin
+
+      - name: Pick the repository of the day
+        run: bin/habichuela pick ${{ inputs.dry_run && '--dry-run' || '' }}
+
+      - name: Refresh stale stats
+        run: bin/habichuela refresh --limit 25 ${{ inputs.dry_run && '--dry-run' || '' }}
+
+      - name: Commit data
+        if: ${{ !inputs.dry_run }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data
+          if git diff --cached --quiet; then
+            echo "no data changes"
+          else
+            git commit -m "data: $(date -u +%F)"
+            git push
+          fi
+
+      - name: Build the site
+        run: bin/habichuela build
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+
+      - name: Deploy to GitHub Pages
+        if: ${{ !inputs.dry_run }}
+        id: deploy
+        uses: actions/deploy-pages@v4

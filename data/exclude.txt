@@ -1,0 +1,2 @@
+# Repositories that should never be featured, one owner/name per line.
+# Lines starting with # are comments.
