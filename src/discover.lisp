@@ -1,39 +1,131 @@
 (in-package #:habichuela)
 
-;;; Discovery outside Quicklisp: GitHub repository search for Common Lisp
-;;; repositories, one month of creation dates at a time. Every month since
-;;; GitHub launched gets the same odds, so quiet years surface as often as
-;;; busy ones. Search returns at most 1000 results per query, which is why
-;;; the pool is sliced by month instead of fetched whole.
+;;; Discovery outside Quicklisp. Each forge has its own way to find Common Lisp
+;;; repositories; all of them produce REPO-REFs in batches, and the picker tries
+;;; the batches in order until something is eligible.
+;;;
+;;;   GitHub    repository search, one random month of creation dates at a time
+;;;             (search returns at most 1000 results per query, hence the slices)
+;;;   GitLab    the common-lisp topic, then a name/description search for "lisp"
+;;;             in a random month of activity; the language filter of GitLab's
+;;;             API returns a server error for Common Lisp, so the primary
+;;;             language is checked per project instead
+;;;   Codeberg  the common-lisp topic plus a name/description search, both
+;;;             filtered on the primary language reported by the API
 
-(defparameter *discovery-min-stars* 3
-  "Minimum stars for repositories found through search. GitHub has no curation,
-so the bar is a little higher than for Quicklisp projects.")
+(defparameter *discovery-min-stars* '((:github . 3) (:gitlab . 1) (:codeberg . 1))
+  "Minimum stars for repositories found through search, per forge. There is no
+curation there, so GitHub gets a higher bar than Quicklisp's; the smaller forges
+hand out far fewer stars.")
 (defparameter *discovery-max-windows* 8
-  "Months to search before falling back to the Quicklisp list for the day.")
+  "GitHub: months to search before giving up on discovery for the day.")
+(defparameter *codeberg-search-pages* 3
+  "Codeberg: pages of 50 to fetch per search channel.")
 
-(defun days-in-month (year month)
-  (if (= month 12)
-      31
-      (floor (- (encode-universal-time 0 0 0 1 (1+ month) year 0)
-                (encode-universal-time 0 0 0 1 month year 0))
-             86400)))
+(defun discovery-min-stars (forge)
+  (or (cdr (assoc forge *discovery-min-stars*)) 1))
 
-(defun month-windows (date)
-  "created: ranges for every month from 2008-01 up to the month of DATE, oldest first."
+;;; Month windows
+
+(defun month-windows (date &key (from-year 2008))
+  "(year . month) for every month from FROM-YEAR-01 up to the month of DATE."
   (let ((end-year (parse-integer date :start 0 :end 4))
         (end-month (parse-integer date :start 5 :end 7)))
-    (loop for year from 2008 to end-year
+    (loop for year from from-year to end-year
           append (loop for month from 1 to (if (= year end-year) end-month 12)
-                       collect (format nil "~4,'0d-~2,'0d-01..~4,'0d-~2,'0d-~2,'0d"
-                                       year month year month (days-in-month year month))))))
+                       collect (cons year month)))))
 
-(defun discovery-query (window)
-  (format nil "language:\"Common Lisp\" stars:>=~d fork:false archived:false created:~a"
-          *discovery-min-stars* window))
+(defun month-start (year month)
+  (format nil "~4,'0d-~2,'0d-01" year month))
 
-(defun search-window (window)
-  "owner/name of the repositories created in WINDOW, most recently updated first."
-  (multiple-value-bind (items total incomplete) (gh-search-repos (discovery-query window))
-    (log-line "  created ~a: ~d repositor~:@p~:[~; (incomplete results)~]" window total total incomplete)
-    (mapcar (lambda (item) (jget item "full_name")) items)))
+(defun next-month-start (year month)
+  (if (= month 12)
+      (month-start (1+ year) 1)
+      (month-start year (1+ month))))
+
+(defun month-end (year month)
+  (let ((days (if (= month 12)
+                  31
+                  (floor (- (encode-universal-time 0 0 0 1 (1+ month) year 0)
+                            (encode-universal-time 0 0 0 1 month year 0))
+                         86400))))
+    (format nil "~4,'0d-~2,'0d-~2,'0d" year month days)))
+
+;;; GitHub
+
+(defun github-search (query)
+  (let ((j (api-get (format nil "https://api.github.com/search/repositories?q=~a&sort=updated&order=desc&per_page=100"
+                            (url-encode query))
+                    :headers (forge-headers :github))))
+    (log-line "  GitHub ~a: ~d repositor~:@p~:[~; (incomplete results)~]"
+              query (jget j "total_count" 0) (jget j "total_count" 0) (truthy (jget j "incomplete_results")))
+    (mapcar (lambda (item) (make-repo-ref :github "github.com" (jget item "full_name")))
+            (to-list (jget j "items")))))
+
+(defun github-window-query (year month)
+  (format nil "language:\"Common Lisp\" stars:>=~d fork:false archived:false created:~a..~a"
+          (discovery-min-stars :github) (month-start year month) (month-end year month)))
+
+;;; GitLab
+
+(defun gitlab-list (params)
+  "Projects from gitlab.com matching PARAMS, pre-filtered on what the listing shows."
+  (let ((projects (to-list (api-get (format nil "https://gitlab.com/api/v4/projects?~a" params)
+                                    :headers (forge-headers :gitlab)))))
+    (log-line "  GitLab ~a: ~d project~:p" params (length projects) (length projects))
+    (loop for p in projects
+          when (and (>= (jget p "star_count" 0) (discovery-min-stars :gitlab))
+                    (not (blank-p (jget p "description")))
+                    (null (jget p "forked_from_project")))
+            collect (make-repo-ref :gitlab "gitlab.com" (jget p "path_with_namespace")))))
+
+(defun gitlab-window-params (year month)
+  (format nil "search=lisp&search_namespaces=false&archived=false&order_by=last_activity_at&sort=desc&per_page=100&last_activity_after=~aT00:00:00Z&last_activity_before=~aT00:00:00Z"
+          (month-start year month) (next-month-start year month)))
+
+;;; Codeberg
+
+(defun codeberg-search (params)
+  "(values refs raw-count): Common Lisp repositories from one page of a Codeberg search."
+  (let* ((j (api-get (format nil "https://codeberg.org/api/v1/repos/search?~a" params)
+                     :headers (forge-headers :codeberg)))
+         (data (to-list (jget j "data"))))
+    (values (loop for r in data
+                  when (and (equal (jget r "language") "Common Lisp")
+                            (>= (jget r "stars_count" 0) (discovery-min-stars :codeberg))
+                            (not (truthy (jget r "fork")))
+                            (not (truthy (jget r "mirror")))
+                            (not (truthy (jget r "archived")))
+                            (not (blank-p (jget r "description"))))
+                    collect (make-repo-ref :codeberg "codeberg.org" (jget r "full_name")))
+            (length data))))
+
+(defun codeberg-channel (base-params)
+  (loop with refs = '()
+        for page from 1 to *codeberg-search-pages*
+        do (multiple-value-bind (batch raw) (codeberg-search (format nil "~a&limit=50&page=~d" base-params page))
+             (setf refs (append refs batch))
+             (when (< raw 50) (loop-finish)))
+        finally (return refs)))
+
+(defun codeberg-candidates ()
+  (let ((refs (append (codeberg-channel "q=common-lisp&topic=true&mode=source")
+                      (codeberg-channel "q=lisp&includeDesc=true&mode=source&sort=updated&order=desc"))))
+    (log-line "  Codeberg: ~d Common Lisp repositor~:@p across both searches" (length refs) (length refs))
+    (remove-duplicates refs :key #'ref-key :test #'string= :from-end t)))
+
+;;; Batches
+
+(defun candidate-batches (forge date seed)
+  "Closures, in the order to try them, each returning a list of REPO-REFs."
+  (ecase forge
+    (:github
+     (loop for (year . month) in (subseq (seeded-shuffle (month-windows date) seed) 0 *discovery-max-windows*)
+           collect (let ((y year) (m month))
+                     (lambda () (github-search (github-window-query y m))))))
+    (:gitlab
+     (let ((window (first (seeded-shuffle (month-windows date :from-year 2012) seed))))
+       (list (lambda () (gitlab-list "topic=common-lisp&archived=false&per_page=100"))
+             (lambda () (gitlab-list (gitlab-window-params (car window) (cdr window)))))))
+    (:codeberg
+     (list #'codeberg-candidates))))

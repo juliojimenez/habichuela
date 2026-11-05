@@ -28,6 +28,9 @@ jobs:
       url: ${{ steps.deploy.outputs.page_url }}
     env:
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      # Optional. A gitlab.com token with read_api unlocks archived, mirror and issue counts.
+      GITLAB_TOKEN: ${{ secrets.GITLAB_TOKEN }}
+      CODEBERG_TOKEN: ${{ secrets.CODEBERG_TOKEN }}
     steps:
       - uses: actions/checkout@v4
 

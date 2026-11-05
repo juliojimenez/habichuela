@@ -43,3 +43,8 @@
         for d = (jget r "date")
         when (and (valid-date-p d) (<= 0 (days-between d date) days))
           collect (lc (record-owner r))))
+
+(defun record-ref (rec)
+  "The REPO-REF a record points at. Records written before forges were tracked are GitHub."
+  (let ((host (jget rec "host" "github.com")))
+    (make-repo-ref (or (forge-for-host host) :github) host (record-repo rec))))

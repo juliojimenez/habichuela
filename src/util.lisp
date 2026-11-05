@@ -130,3 +130,13 @@
   (ensure-directories-exist path)
   (with-open-file (out path :direction :output :if-exists :supersede :external-format :utf-8)
     (write-string text out)))
+
+;;; Seeded randomness, so a rerun on the same day makes the same choices.
+
+(defun seeded-random-state (seed)
+  #+sbcl (sb-ext:seed-random-state seed)
+  #-sbcl (make-random-state t))
+
+(defun seeded-shuffle (list seed)
+  (let ((*random-state* (seeded-random-state seed)))
+    (alex:shuffle (copy-list list))))

@@ -4,6 +4,16 @@
 (defparameter *site-tagline* "A Common Lisp repository a day.")
 (defparameter *tag-authority* "habichue.la"
   "Authority for the tag: URIs that identify feed entries. Never changes, even if the site moves.")
+(defparameter *socials*
+  '(("X" . "https://x.com/habicuela")
+    ("Mastodon" . "https://mastodon.social/@habichuela")
+    ("Bluesky" . "https://bsky.app/profile/habichue.la")))
+(defparameter *logo-file* "bean.png"
+  "Logo and favicon, copied from static/ into the site. When the file is missing the
+header, favicon and preview image are simply left out.")
+
+(defun static-dir () (merge-pathnames "static/" (root)))
+(defun logo-p () (probe-file (merge-pathnames *logo-file* (static-dir))))
 
 (defun base-url ()
   "Public URL of the site with one trailing slash. Used for absolute links in the feed.
@@ -24,7 +34,8 @@ body { margin: 0; background: var(--bg); color: var(--fg); font: 16px/1.5 system
 header, main, footer { max-width: 72rem; margin: 0 auto; padding: 0 1rem; }
 header { padding-top: 2rem; display: flex; flex-wrap: wrap; align-items: baseline; gap: .5rem 1.25rem; }
 header h1 { margin: 0; font-size: 1.75rem; letter-spacing: -.01em; }
-header h1 a { color: inherit; text-decoration: none; }
+header h1 a { color: inherit; text-decoration: none; display: inline-flex; align-items: center; gap: .5rem; }
+.logo { height: 2.1rem; width: auto; }
 .tagline { margin: 0; color: var(--muted); }
 nav { margin-left: auto; display: flex; gap: 1rem; }
 a { color: var(--accent); }
@@ -43,8 +54,9 @@ th { color: var(--muted); font-weight: 600; font-size: .8rem; text-transform: up
 td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
 td.date { white-space: nowrap; color: var(--muted); }
 td.updated { white-space: nowrap; }
-.desc { color: var(--muted); font-size: .9rem; }
+.desc, .host { color: var(--muted); font-size: .9rem; }
 footer { padding: 2rem 1rem 3rem; color: var(--muted); font-size: .9rem; }
+.socials a { margin-right: .15rem; }
 @media (max-width: 640px) {
   th:nth-child(n+5), td:nth-child(n+5) { display: none; }
   .tagline { flex-basis: 100%; }
@@ -55,7 +67,16 @@ footer { padding: 2rem 1rem 3rem; color: var(--muted); font-size: .9rem; }
 ")
 
 (defun source-text (rec)
-  (if (equal (jget rec "source") "github") "found by GitHub search" "from the Quicklisp projects list"))
+  (let ((s (jget rec "source")))
+    (cond ((equal s "github") "found by GitHub search")
+          ((equal s "gitlab") "found by GitLab search")
+          ((equal s "codeberg") "found by Codeberg search")
+          (t "from the Quicklisp projects list"))))
+
+(defun other-forge-host (rec)
+  "The host when the repository is not on GitHub, else NIL."
+  (let ((host (jget rec "host")))
+    (when (and host (not (equal host "github.com"))) host)))
 
 (defun yes-no (v) (if (truthy v) "yes" "no"))
 (defun fmt-int (n) (format nil "~:d" (if (integerp n) n 0)))
@@ -81,8 +102,10 @@ footer { padding: 2rem 1rem 3rem; color: var(--muted); font-size: .9rem; }
         (:li (format nil "Open issues: ~a" (fmt-int (jget rec "open_issues"))))
         (let ((ql (jget rec "quicklisp_project")))
           (if ql (:li (format nil "Quicklisp: ~a" ql)) (:li "Not in Quicklisp")))
+        (let ((host (other-forge-host rec)))
+          (when host (:li (format nil "On ~a" host))))
         (when (truthy (jget rec "archived")) (:li :class "warn" "Archived"))
-        (when (truthy (jget rec "missing")) (:li :class "warn" "No longer on GitHub")))
+        (when (truthy (jget rec "missing")) (:li :class "warn" "No longer online")))
       (let ((systems (to-list (jget rec "asd_systems"))))
         (when systems (:p :class "systems" (format nil "ASDF systems: ~{~a~^, ~}" systems))))
       (let ((topics (to-list (jget rec "topics"))))
@@ -100,6 +123,8 @@ footer { padding: 2rem 1rem 3rem; color: var(--muted); font-size: .9rem; }
             (:tr :id (jget r "date")
               (:td :class "date" (jget r "date"))
               (:td (:a :href (jget r "url") (jget r "repo"))
+                   (let ((host (other-forge-host r)))
+                     (when host (:span :class "host" (format nil " · ~a" host))))
                    (:div :class "desc" (or (jget r "description") "")))
               (:td :class "num" (fmt-int (jget r "stars")))
               (:td :class "updated" :title (or (jget r "pushed_at") "") (date-part (jget r "pushed_at")))
@@ -108,8 +133,18 @@ footer { padding: 2rem 1rem 3rem; color: var(--muted); font-size: .9rem; }
               (:td (or (jget r "license") "none"))
               (:td (if (jget r "quicklisp_project") "yes" "no")))))))))
 
+(defun socials-line ()
+  (spinneret:with-html
+    (:p :class "socials" "Follow habichuela: "
+      (let ((first t))
+        (dolist (s *socials*)
+          (unless first (:span " · "))
+          (setf first nil)
+          (:a :href (cdr s) :rel "me" (car s)))))))
+
 (defun index-html (records)
-  (let ((latest (first records)))
+  (let ((latest (first records))
+        (logo (logo-p)))
     (spinneret:with-html-string
       (:doctype)
       (:html :lang "en"
@@ -118,11 +153,21 @@ footer { padding: 2rem 1rem 3rem; color: var(--muted); font-size: .9rem; }
           (:meta :name "viewport" :content "width=device-width, initial-scale=1")
           (:title *site-title*)
           (:meta :name "description" :content *site-tagline*)
+          (:meta :property "og:title" :content *site-title*)
+          (:meta :property "og:description" :content *site-tagline*)
+          (:meta :property "og:url" :content (base-url))
+          (:meta :name "twitter:card" :content "summary")
+          (when logo
+            (:link :rel "icon" :type "image/png" :href *logo-file*)
+            (:link :rel "apple-touch-icon" :href *logo-file*)
+            (:meta :property "og:image" :content (concatenate 'string (base-url) *logo-file*)))
           (:link :rel "alternate" :type "application/atom+xml" :title *site-title* :href "feed.xml")
           (:style (:raw *css*)))
         (:body
           (:header
-            (:h1 (:a :href "./" *site-title*))
+            (:h1 (:a :href "./"
+                   (when logo (:img :class "logo" :src *logo-file* :alt "" :width 512 :height 512))
+                   *site-title*))
             (:p :class "tagline" *site-tagline*)
             (:nav (:a :href "#archive" "Archive") (:a :href "feed.xml" "Feed") (:a :href "data.json" "JSON")))
           (:main
@@ -131,7 +176,8 @@ footer { padding: 2rem 1rem 3rem; color: var(--muted); font-size: .9rem; }
               (:h2 (format nil "Archive (~d)" (length records)))
               (archive-table records)))
           (:footer
-            (:p (format nil "Built ~a. Stats come from the GitHub API and are refreshed a few at a time each day." (now-iso)))))))))
+            (socials-line)
+            (:p (format nil "Built ~a. Stats come from the GitHub, GitLab and Codeberg APIs and are refreshed a few at a time each day." (now-iso)))))))))
 
 (defun xml-escape (s)
   (with-output-to-string (out)
@@ -170,6 +216,8 @@ footer { padding: 2rem 1rem 3rem; color: var(--muted); font-size: .9rem; }
       (format out "  <link href=\"~a\"/>~%" (xml-escape base))
       (format out "  <link rel=\"self\" href=\"~afeed.xml\"/>~%" (xml-escape base))
       (format out "  <id>tag:~a,2026:feed</id>~%" *tag-authority*)
+      (when (logo-p)
+        (format out "  <icon>~a~a</icon>~%" (xml-escape base) *logo-file*))
       (format out "  <author><name>~a</name></author>~%" (xml-escape *site-title*))
       (format out "  <updated>~a</updated>~%"
               (if records (entry-time (first records)) (now-iso)))
@@ -184,7 +232,7 @@ footer { padding: 2rem 1rem 3rem; color: var(--muted); font-size: .9rem; }
       (format out "</feed>~%"))))
 
 (defun build-site ()
-  "Write index.html, feed.xml and data.json to site/."
+  "Write index.html, feed.xml and data.json to site/, and copy everything in static/."
   (let ((records (list-records))
         (dir (site-dir)))
     (ensure-directories-exist dir)
@@ -192,4 +240,7 @@ footer { padding: 2rem 1rem 3rem; color: var(--muted); font-size: .9rem; }
     (write-text-file (merge-pathnames "feed.xml" dir) (atom-feed records))
     (write-json-file (merge-pathnames "data.json" dir) (coerce records 'vector))
     (write-text-file (merge-pathnames ".nojekyll" dir) "")
+    (when (probe-file (static-dir))
+      (dolist (file (uiop:directory-files (static-dir)))
+        (uiop:copy-file file (merge-pathnames (file-namestring file) dir))))
     (log-line "Built the site with ~d record~:p in ~a" (length records) dir)))
