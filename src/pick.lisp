@@ -86,7 +86,8 @@ Authentication and rate-limit failures are re-signalled."
             (if why
                 (log-line "  skipped: ~a" why)
                 (let ((rec (build-snapshot meta paths truncated
-                                           :date date :source source :quicklisp-project project)))
+                                           :date date :source source :picked-at (now-iso)
+                                           :quicklisp-project project)))
                   (emit-record rec date dry-run)
                   (return rec)))))))))
 
@@ -170,6 +171,7 @@ problems are logged, and the refresh stops early on authentication or rate-limit
                                          :date date
                                          :source (jget rec "source"
                                                        (if (jget rec "quicklisp_project") "quicklisp" "github"))
+                                         :picked-at (jget rec "picked_at" (jget rec "fetched_at"))
                                          :quicklisp-project (jget rec "quicklisp_project"))))
                 (log-line "  ~a: ~:d star~:p, pushed ~a" repo
                           (jget new "stars" 0) (date-part (jget new "pushed_at")))

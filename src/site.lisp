@@ -2,11 +2,16 @@
 
 (defparameter *site-title* "habichuela")
 (defparameter *site-tagline* "A Common Lisp repository a day.")
+(defparameter *tag-authority* "habichue.la"
+  "Authority for the tag: URIs that identify feed entries. Never changes, even if the site moves.")
 
 (defun base-url ()
   "Public URL of the site with one trailing slash. Used for absolute links in the feed.
 The workflow passes the Pages base URL; the default is the custom domain."
   (let ((u (string-right-trim "/" (env "HABICHUELA_BASE_URL" "https://habichue.la"))))
+    ;; Pages reports http:// until "Enforce HTTPS" is on; the site is always https.
+    (when (starts-with "http://" u)
+      (setf u (concatenate 'string "https://" (subseq u 7))))
     (concatenate 'string u "/")))
 
 (defparameter *css* "
@@ -147,6 +152,13 @@ footer { padding: 2rem 1rem 3rem; color: var(--muted); font-size: .9rem; }
           (yes-no (jget r "has_tests"))
           (yes-no (jget r "has_ci"))))
 
+(defun entry-id (r)
+  (format nil "tag:~a,~a:pick" *tag-authority* (jget r "date")))
+
+(defun entry-time (r)
+  "When the pick was made. Older records without picked_at fall back to midnight UTC of their date."
+  (or (jget r "picked_at") (format nil "~aT00:00:00Z" (jget r "date"))))
+
 (defun atom-feed (records)
   (let ((base (base-url))
         (entries (subseq records 0 (min 50 (length records)))))
@@ -157,16 +169,16 @@ footer { padding: 2rem 1rem 3rem; color: var(--muted); font-size: .9rem; }
       (format out "  <subtitle>~a</subtitle>~%" (xml-escape *site-tagline*))
       (format out "  <link href=\"~a\"/>~%" (xml-escape base))
       (format out "  <link rel=\"self\" href=\"~afeed.xml\"/>~%" (xml-escape base))
-      (format out "  <id>~a</id>~%" (xml-escape base))
+      (format out "  <id>tag:~a,2026:feed</id>~%" *tag-authority*)
       (format out "  <author><name>~a</name></author>~%" (xml-escape *site-title*))
       (format out "  <updated>~a</updated>~%"
-              (if records (format nil "~aT00:00:00Z" (jget (first records) "date")) (now-iso)))
+              (if records (entry-time (first records)) (now-iso)))
       (dolist (r entries)
         (format out "  <entry>~%")
         (format out "    <title>~a</title>~%" (xml-escape (jget r "repo")))
         (format out "    <link href=\"~a\"/>~%" (xml-escape (jget r "url")))
-        (format out "    <id>~a#~a</id>~%" (xml-escape base) (jget r "date"))
-        (format out "    <updated>~aT00:00:00Z</updated>~%" (jget r "date"))
+        (format out "    <id>~a</id>~%" (entry-id r))
+        (format out "    <published>~a</published>~%    <updated>~a</updated>~%" (entry-time r) (entry-time r))
         (format out "    <summary>~a</summary>~%" (xml-escape (entry-summary r)))
         (format out "  </entry>~%"))
       (format out "</feed>~%"))))

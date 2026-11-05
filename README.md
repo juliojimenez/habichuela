@@ -88,9 +88,10 @@ builds default to `https://habichue.la/`; override with `HABICHUELA_BASE_URL`.
 repo, url, description, homepage, language, license, stars, forks,
 open_issues, created_at, pushed_at, archived, fork, default_branch, topics,
 has_readme, has_tests, has_ci, asd_systems, tree_truncated,
-quicklisp_project, source (`quicklisp` or `github`), fetched_at. The site
+quicklisp_project, source (`quicklisp` or `github`), picked_at, fetched_at. The site
 publishes the same records as `data.json`, and the 50 most recent picks as
-`feed.xml`.
+`feed.xml`. Feed entries have stable `tag:` ids and carry the time the pick was
+made, so RSS-to-social services such as dlvr.it see each pick exactly once.
 
 `has_tests` is a heuristic: a `t/`, `test/` or `tests/` directory, or a file
 named like `foo-test.asd`, `tests.lisp` or `run-tests.sh`. `has_ci` looks for
