@@ -32,7 +32,7 @@ The workflow passes the Pages base URL; the default is the custom domain."
 * { box-sizing: border-box; }
 body { margin: 0; background: var(--bg); color: var(--fg); font: 16px/1.5 system-ui, -apple-system, sans-serif; }
 header, main, footer { max-width: 72rem; margin: 0 auto; padding: 0 1rem; }
-header { padding-top: 2rem; display: flex; flex-wrap: wrap; align-items: baseline; gap: .5rem 1.25rem; }
+header { padding-top: 2rem; display: flex; flex-wrap: wrap; align-items: center; gap: .5rem 1.25rem; }
 header h1 { margin: 0; font-size: 1.75rem; letter-spacing: -.01em; }
 header h1 a { color: inherit; text-decoration: none; display: inline-flex; align-items: center; gap: .5rem; }
 .logo { height: 2.1rem; width: auto; }
