@@ -6,10 +6,12 @@
 ;;;
 ;;;   GitHub    repository search, one random month of creation dates at a time
 ;;;             (search returns at most 1000 results per query, hence the slices)
-;;;   GitLab    the common-lisp topic, then a name/description search for "lisp"
-;;;             in a random month of activity; the language filter of GitLab's
-;;;             API returns a server error for Common Lisp, so the primary
-;;;             language is checked per project instead
+;;;   GitLab    the common-lisp topic plus a name/description search for "lisp"
+;;;             restricted to projects that use Common Lisp (one seeded page of
+;;;             the most recently active); GitLab's language filter alone times
+;;;             out for all but the biggest languages (#5), so a keyword-only
+;;;             search in a random month of activity is the fallback. The
+;;;             primary language is still verified per project.
 ;;;   Codeberg  the common-lisp topic plus a name/description search, both
 ;;;             filtered on the primary language reported by the API
 
@@ -21,6 +23,9 @@ hand out far fewer stars.")
   "GitHub: months to search before giving up on discovery for the day.")
 (defparameter *codeberg-search-pages* 3
   "Codeberg: pages of 50 to fetch per search channel.")
+(defparameter *gitlab-search-pages* 6
+  "GitLab: the language-filtered search is sampled from this many pages of 100, most
+recently active first. Deeper pages approach gitlab.com's 15 second statement timeout.")
 
 (defun discovery-min-stars (forge)
   (or (cdr (assoc forge *discovery-min-stars*)) 1))
@@ -68,16 +73,22 @@ hand out far fewer stars.")
 
 ;;; GitLab
 
-(defun gitlab-list (params)
+(defun gitlab-list (params &key (retries 2))
   "Projects from gitlab.com matching PARAMS, pre-filtered on what the listing shows."
   (let ((projects (to-list (api-get (format nil "https://gitlab.com/api/v4/projects?~a" params)
-                                    :headers (forge-headers :gitlab)))))
+                                    :headers (forge-headers :gitlab) :retries retries))))
     (log-line "  GitLab ~a: ~d project~:p" params (length projects) (length projects))
     (loop for p in projects
           when (and (>= (jget p "star_count" 0) (discovery-min-stars :gitlab))
                     (not (blank-p (jget p "description")))
                     (null (jget p "forked_from_project")))
             collect (make-repo-ref :gitlab "gitlab.com" (jget p "path_with_namespace")))))
+
+(defun gitlab-language-params (page)
+  "Projects that use Common Lisp and mention lisp in name, path or description.
+The language filter on its own times out (#5); combined with a search it answers in a second."
+  (format nil "search=lisp&search_namespaces=false&with_programming_language=Common%20Lisp&archived=false&order_by=last_activity_at&sort=desc&per_page=100&page=~d"
+          page))
 
 (defun gitlab-window-params (year month)
   (format nil "search=lisp&search_namespaces=false&archived=false&order_by=last_activity_at&sort=desc&per_page=100&last_activity_after=~aT00:00:00Z&last_activity_before=~aT00:00:00Z"
@@ -116,6 +127,13 @@ hand out far fewer stars.")
 
 ;;; Batches
 
+(defmacro quietly (form)
+  "Evaluate FORM, turning an API failure into an empty result with a log line."
+  `(handler-case ,form
+     (api-error (e)
+       (log-line "  ~a, skipping this channel" e)
+       nil)))
+
 (defun candidate-batches (forge date seed)
   "Closures, in the order to try them, each returning a list of REPO-REFs."
   (ecase forge
@@ -124,8 +142,13 @@ hand out far fewer stars.")
            collect (let ((y year) (m month))
                      (lambda () (github-search (github-window-query y m))))))
     (:gitlab
-     (let ((window (first (seeded-shuffle (month-windows date :from-year 2012) seed))))
-       (list (lambda () (gitlab-list "topic=common-lisp&archived=false&per_page=100"))
+     (let ((page (1+ (mod seed *gitlab-search-pages*)))
+           (window (first (seeded-shuffle (month-windows date :from-year 2012) seed))))
+       (list (lambda ()
+               (remove-duplicates
+                (append (quietly (gitlab-list "topic=common-lisp&archived=false&per_page=100"))
+                        (quietly (gitlab-list (gitlab-language-params page) :retries 0)))
+                :key #'ref-key :test #'string= :from-end t))
              (lambda () (gitlab-list (gitlab-window-params (car window) (cdr window)))))))
     (:codeberg
      (list #'codeberg-candidates))))
