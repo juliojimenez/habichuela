@@ -72,7 +72,7 @@
             (jget lic "name" "Other")
             spdx)))))
 
-(defun build-snapshot (meta paths truncated &key date source quicklisp-project)
+(defun build-snapshot (meta paths truncated &key date source picked-at quicklisp-project)
   "A record for the repository described by META (GitHub repo JSON) and PATHS (its tree)."
   (record "date" date
           "repo" (jget meta "full_name")
@@ -97,4 +97,5 @@
           "tree_truncated" (json-bool truncated)
           "quicklisp_project" (json-or-null quicklisp-project)
           "source" (json-or-null source)
+          "picked_at" (json-or-null picked-at)
           "fetched_at" (now-iso)))
