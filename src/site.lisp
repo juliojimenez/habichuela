@@ -4,9 +4,10 @@
 (defparameter *site-tagline* "A Common Lisp repository a day.")
 
 (defun base-url ()
-  "Public URL of the site, with a trailing slash. Used for absolute links in the feed."
-  (let ((u (env "HABICHUELA_BASE_URL" "https://juliojimenez.github.io/habichuela/")))
-    (if (ends-with "/" u) u (concatenate 'string u "/"))))
+  "Public URL of the site with one trailing slash. Used for absolute links in the feed.
+The workflow passes the Pages base URL; the default is the custom domain."
+  (let ((u (string-right-trim "/" (env "HABICHUELA_BASE_URL" "https://habichue.la"))))
+    (concatenate 'string u "/")))
 
 (defparameter *css* "
 :root { --bg:#fbfaf7; --fg:#1f1d1a; --muted:#6b665e; --line:#e4dfd5; --card:#ffffff; --accent:#8b2635; --chip:#f1ede4; }
