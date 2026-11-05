@@ -143,3 +143,8 @@ could read reads "see repository".
   Every Lisp client depends on cl+ssl, which does not work with OpenSSL 4,
   Homebrew's default `openssl` since late 2026. The whole HTTP layer is one
   function in `src/http.lisp`, so swapping it back later is easy.
+
+## License
+
+Copyright 2026 Julio Jimenez. Licensed under the Apache License, Version 2.0;
+see [LICENSE](LICENSE).
