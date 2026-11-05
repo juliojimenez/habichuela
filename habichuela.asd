@@ -1,6 +1,7 @@
 (defsystem "habichuela"
   :description "A Common Lisp repository a day: picks a repo, records its stats, builds a static site."
   :author "Julio Jimenez"
+  :license "Apache-2.0"
   :version "0.2.0"
   :depends-on ("alexandria" "com.inuoe.jzon" "local-time" "spinneret")
   :pathname "src/"
