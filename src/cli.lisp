@@ -9,7 +9,10 @@ commands:
   refresh [--limit N] [--dry-run]        re-fetch stats for the N least recently refreshed records (default 25)
   build                                  write the static site to site/
   pool                                   count the Quicklisp candidate pool per forge
-  license <owner/name | host/owner/name>  show how the license of one repository is determined
+  inspect <repo>                         print the record that would be written for one repository
+  license <repo>                         show how the license of one repository is determined
+
+<repo> is owner/name for GitHub, or host/owner/name for any forge, or a repository URL.
 
 environment:
   GITHUB_TOKEN          GitHub API token (strongly recommended)
@@ -27,6 +30,16 @@ environment:
         ((member s '("gitlab" "gl") :test #'string-equal) :gitlab)
         ((member s '("codeberg" "cb") :test #'string-equal) :codeberg)
         (t (error "Unknown source ~s, want quicklisp, github, gitlab or codeberg" s))))
+
+(defun target-ref (target)
+  "A REPO-REF for a command-line repository argument."
+  (unless target
+    (error "A repository is required: owner/name, host/owner/name or a URL"))
+  (let ((url (cond ((search "://" target) target)
+                   ((= (count #\/ target) 1) (format nil "https://github.com/~a" target))
+                   (t (format nil "https://~a" target)))))
+    (or (parse-repo-url url)
+        (error "Not a repository on a forge we read: ~a" target))))
 
 (defun flag-p (args name)
   (and (member name args :test #'string=) t))
@@ -56,12 +69,15 @@ environment:
              (loop for (forge . n) in (sort (pool-summary projects) #'> :key #'cdr)
                    do (format t "  ~6d on ~a~%" n (forge-display forge))))
            0)
+          ((string= cmd "inspect")
+           (let ((ref (target-ref (first rest))))
+             (multiple-value-bind (meta paths truncated) (fetch-repo ref)
+               (jzon:stringify (build-snapshot meta paths truncated :ref ref :date (today) :source "inspect")
+                               :stream *standard-output* :pretty t)
+               (terpri)))
+           0)
           ((string= cmd "license")
-           (let* ((target (or (first rest) (error "usage: habichuela license owner/name | host/owner/name")))
-                  (url (cond ((search "://" target) target)
-                             ((= (count #\/ target) 1) (format nil "https://github.com/~a" target))
-                             (t (format nil "https://~a" target))))
-                  (ref (or (parse-repo-url url) (error "Not a repository on a forge we read: ~a" target))))
+           (let ((ref (target-ref (first rest))))
              (multiple-value-bind (meta paths) (fetch-repo ref)
                (multiple-value-bind (license from) (resolve-license ref meta paths)
                  (format t "~a~%  forge says:   ~a~%  license file: ~a~%  result:       ~a~@[ (from ~a)~]~%"
@@ -74,13 +90,15 @@ environment:
 (defun toplevel ()
   "Entry point of the saved executable."
   (sb-ext:disable-debugger)
-  (let ((code (handler-case (main (rest sb-ext:*posix-argv*))
-                (sb-sys:interactive-interrupt ()
-                  (format *error-output* "~&interrupted~%")
-                  130)
-                (error (e)
-                  (format *error-output* "~&error: ~a~%" e)
-                  1))))
+  (let ((code (unwind-protect
+                   (handler-case (main (rest sb-ext:*posix-argv*))
+                     (sb-sys:interactive-interrupt ()
+                       (format *error-output* "~&interrupted~%")
+                       130)
+                     (error (e)
+                       (format *error-output* "~&error: ~a~%" e)
+                       1))
+                (cleanup-clones))))
     (finish-output *standard-output*)
     (finish-output *error-output*)
     (uiop:quit (or code 0))))

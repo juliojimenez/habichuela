@@ -196,7 +196,7 @@ file is read, then the :license of the system definition. FROM is \"forge\", \"f
         (file (license-file paths (repo-ref-name ref)))
         (branch (jget meta "default_branch" "master")))
     (flet ((fetch (path)
-             (handler-case (fetch-text (raw-file-url ref branch path))
+             (handler-case (read-repo-file ref branch path)
                (error (e) (log-line "  could not read ~a: ~a" path e) nil))))
       (if (and forge-license (not (equal forge-license "Other")))
           (values forge-license "forge")

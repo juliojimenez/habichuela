@@ -14,7 +14,11 @@ Picks come from four sources, chosen per day:
   with odds of 3:1:1: repositories whose primary language is Common Lisp and
   that are *not* in Quicklisp.
 
-Three forges are read: GitHub, GitLab (gitlab.com) and Codeberg. Everything is
+Three forges are read through their APIs: GitHub, GitLab (gitlab.com) and
+Codeberg. gitlab.common-lisp.net, home to 84 Quicklisp projects, blocks API
+calls with an anti-bot challenge but serves git, so its projects are read from
+a shallow clone: file listing, last commit, README and license, but no stars or
+issue counts. Everything is
 written in Common Lisp (SBCL) and runs with no server: the data lives in this
 repository as one JSON file per day, and the site is deployed to GitHub Pages
 from the same workflow run.
@@ -72,7 +76,8 @@ make serve                # preview at http://localhost:8000/
 `HABICHUELA_DATE=2026-01-31 make pick` picks for another date.
 `make pick ARGS="--dry-run --source codeberg"` forces a source
 (`quicklisp`, `github`, `gitlab` or `codeberg`). `bin/habichuela pool` counts
-the Quicklisp pool per forge. `data/exclude.txt` lists repositories that must
+the Quicklisp pool per forge. `bin/habichuela inspect <repo>` prints the record
+that would be written for any repository, on any forge. `data/exclude.txt` lists repositories that must
 never be featured, as `owner/name` or `host/owner/name`.
 
 ## Site
@@ -129,9 +134,10 @@ could read reads "see repository".
 
 ## Known limitations
 
-- Quicklisp projects on sourcehut, Bitbucket, self-hosted git and on
-  gitlab.common-lisp.net are skipped. The common-lisp.net GitLab answers every
-  request, API included, with an anti-bot challenge page.
+- Quicklisp projects on sourcehut, Bitbucket and other self-hosted git are
+  skipped. Projects read from a clone (gitlab.common-lisp.net) have no stars,
+  forks, issue counts or creation date; those fields are null and the site
+  shows "n/a".
 - Without a `GITLAB_TOKEN`, GitLab's API hides the archived flag, the mirror
   flag and the open issue count; those read as false and 0.
 - Dependencies come from a Quicklisp dist pinned by date in
