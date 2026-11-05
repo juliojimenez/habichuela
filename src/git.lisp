@@ -33,14 +33,21 @@
                                                args)
                                        :output :string :error-output nil :ignore-error-status t)))
 
+(defun clone-dir-name (ref)
+  "A directory name safe for any filesystem: sourcehut owners start with a tilde."
+  (substitute-if #\- (lambda (c) (not (or (alphanumericp c) (find c "-._")))) (repo-ref-name ref)))
+
 (defun clone-url (ref)
-  (format nil "https://~a/~a.git" (repo-ref-host ref) (repo-ref-name ref)))
+  "sourcehut rejects a .git suffix; the others accept it."
+  (if (string= (repo-ref-host ref) "git.sr.ht")
+      (format nil "https://~a/~a" (repo-ref-host ref) (repo-ref-name ref))
+      (format nil "https://~a/~a.git" (repo-ref-host ref) (repo-ref-name ref))))
 
 (defun git-clone (ref)
   "The directory of a shallow clone of REF, cloning on first use.
 Signals API-NOT-FOUND when the clone fails, whatever the reason."
   (or (gethash (ref-key ref) *clones*)
-      (let ((dir (merge-pathnames (format nil "~a/" (substitute #\- #\/ (repo-ref-name ref))) (clone-root)))
+      (let ((dir (merge-pathnames (format nil "~a/" (clone-dir-name ref)) (clone-root)))
             (url (clone-url ref)))
         (log-line "  cloning ~a" url)
         (multiple-value-bind (out err code)

@@ -25,9 +25,13 @@ so a project mirrored on two forges is featured once."
 
 (defun forge-name (forge) (string-downcase (symbol-name forge)))
 
-(defparameter *clone-only-hosts* '("gitlab.common-lisp.net")
+(defparameter *clone-only-hosts* '("gitlab.common-lisp.net" "git.sr.ht" "bitbucket.org")
   "Hosts read through a shallow git clone instead of an API, see git.lisp.
-gitlab.common-lisp.net answers every API call with an anti-bot challenge page.")
+gitlab.common-lisp.net answers every API call with an anti-bot challenge page;
+sourcehut needs a token even for public data; Bitbucket has no stars to fetch.")
+
+(defparameter *non-git-source-types* '("mercurial" "darcs" "svn" "cvs" "bzr" "fossil")
+  "quicklisp-projects source types that are not git. Clone-only hosts need git.")
 
 (defun forge-for-host (host)
   (let ((h (lc host)))
@@ -50,11 +54,19 @@ gitlab.common-lisp.net answers every API call with an anti-bot challenge page.")
               (when colon
                 (values (subseq string (+ at 4) colon) (subseq string (1+ colon))))))))))
 
+(defun source-type (line)
+  "The first word of a quicklisp-projects source line, lowercased."
+  (lc (subseq line 0 (or (position-if (lambda (c) (member c '(#\Space #\Tab))) line) (length line)))))
+
 (defun parse-repo-url (string)
-  "A REPO-REF for the repository URL in STRING, or NIL when the host is not a forge we read."
+  "A REPO-REF for the repository URL in STRING, or NIL when the host is not a forge we read.
+STRING may be a whole quicklisp-projects source line; clone-only hosts need a git line."
   (multiple-value-bind (host path) (split-host-and-path string)
     (let ((forge (and host (forge-for-host host))))
-      (when forge
+      (when (and forge
+                 (not (starts-with "#" (source-type string)))
+                 (not (and (eq forge :git)
+                           (member (source-type string) *non-git-source-types* :test #'string=))))
         (let* ((end (position-if (lambda (c) (member c '(#\Space #\Tab #\Return))) path))
                (parts (remove "" (uiop:split-string (subseq path 0 end) :separator "/") :test #'string=))
                ;; GitLab web paths continue with /-/tree/..., and nested groups are allowed.

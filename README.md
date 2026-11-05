@@ -15,10 +15,11 @@ Picks come from four sources, chosen per day:
   that are *not* in Quicklisp.
 
 Three forges are read through their APIs: GitHub, GitLab (gitlab.com) and
-Codeberg. gitlab.common-lisp.net, home to 84 Quicklisp projects, blocks API
-calls with an anti-bot challenge but serves git, so its projects are read from
-a shallow clone: file listing, last commit, README and license, but no stars or
-issue counts. Everything is
+Codeberg. Three more hosts are read from a shallow clone instead, which gives
+the file listing, last commit, README and license but no stars or issue counts:
+gitlab.common-lisp.net (84 Quicklisp projects; its API sits behind an anti-bot
+challenge), sourcehut (needs a token even for public data) and Bitbucket (has
+no stars to fetch). Everything is
 written in Common Lisp (SBCL) and runs with no server: the data lives in this
 repository as one JSON file per day, and the site is deployed to GitHub Pages
 from the same workflow run.
@@ -137,10 +138,10 @@ could read reads "see repository".
 
 ## Known limitations
 
-- Quicklisp projects on sourcehut, Bitbucket and other self-hosted git are
-  skipped. Projects read from a clone (gitlab.common-lisp.net) have no stars,
-  forks, issue counts or creation date; those fields are null and the site
-  shows "n/a".
+- Quicklisp projects on other self-hosted git, on Mercurial, darcs or
+  Subversion, and tarball-only projects are skipped. Projects read from a clone
+  (gitlab.common-lisp.net, sourcehut, Bitbucket) have no stars, forks, issue
+  counts or creation date; those fields are null and the site shows "n/a".
 - Without a `GITLAB_TOKEN`, GitLab's API hides the archived flag, the mirror
   flag and the open issue count; those read as false and 0.
 - Dependencies come from a Quicklisp dist pinned by date in
