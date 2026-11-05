@@ -1,6 +1,6 @@
 (in-package #:habichuela)
 
-;;; Heuristics over the repository file listing.
+;;; Heuristics over the repository file listing, and the record built from them.
 
 (defparameter *test-dir-names* '("t" "test" "tests"))
 (defparameter *test-stems* '("test" "tests" "run-tests" "run-test" "test-suite" "unit-tests"))
@@ -9,8 +9,9 @@
   '("ocicl" "quicklisp" ".qlot" "vendor" "deps" "third-party" "third_party" "node_modules" "_build"))
 (defparameter *ci-markers*
   '(".github/workflows/" ".gitlab-ci.yml" ".travis.yml" ".circleci/" ".drone.yml"
-    ".woodpecker.yml" ".woodpecker/" ".cirrus.yml" ".builds/" "azure-pipelines.yml"
-    "appveyor.yml" ".appveyor.yml" "Jenkinsfile" ".buildkite/" "bitbucket-pipelines.yml"))
+    ".woodpecker.yml" ".woodpecker/" ".forgejo/workflows/" ".gitea/workflows/" ".cirrus.yml"
+    ".builds/" "azure-pipelines.yml" "appveyor.yml" ".appveyor.yml" "Jenkinsfile" ".buildkite/"
+    "bitbucket-pipelines.yml"))
 
 (defun path-components (path)
   (remove "" (uiop:split-string path :separator "/") :test #'string=))
@@ -35,21 +36,21 @@
 
 (defun has-tests-p (paths)
   (not (null (some (lambda (p)
-          (let ((comps (path-components p)))
-            (and comps
-                 (not (vendored-p comps))
-                 (or (some (lambda (c) (member (lc c) *test-dir-names* :test #'string=)) comps)
-                     (test-file-p (car (last comps)))))))
-        paths))))
+                     (let ((comps (path-components p)))
+                       (and comps
+                            (not (vendored-p comps))
+                            (or (some (lambda (c) (member (lc c) *test-dir-names* :test #'string=)) comps)
+                                (test-file-p (car (last comps)))))))
+                   paths))))
 
 (defun has-ci-p (paths)
-  (some (lambda (p)
-          (some (lambda (marker)
-                  (if (ends-with "/" marker)
-                      (starts-with marker (concatenate 'string p "/"))
-                      (string= p marker)))
-                *ci-markers*))
-        paths))
+  (not (null (some (lambda (p)
+                     (some (lambda (marker)
+                             (if (ends-with "/" marker)
+                                 (starts-with marker (concatenate 'string p "/"))
+                                 (string= p marker)))
+                           *ci-markers*))
+                   paths))))
 
 (defun asd-systems (paths)
   (sort (remove-duplicates
@@ -61,33 +62,35 @@
          :test #'string=)
         #'string<))
 
+(defun license-file-p (paths)
+  "A top-level LICENSE or COPYING file exists, whatever its type."
+  (not (null (some (lambda (p) (and (not (find #\/ p))
+                                    (let ((n (lc p))) (or (starts-with "license" n) (starts-with "copying" n)))))
+                   paths))))
+
 (defun has-readme-p (paths)
-  (some (lambda (p) (and (not (find #\/ p)) (starts-with "readme" (lc p)))) paths))
+  (not (null (some (lambda (p) (and (not (find #\/ p)) (starts-with "readme" (lc p)))) paths))))
 
-(defun license-id (meta)
-  (let ((lic (jget meta "license")))
-    (when (hash-table-p lic)
-      (let ((spdx (jget lic "spdx_id")))
-        (if (or (blank-p spdx) (string= spdx "NOASSERTION"))
-            (jget lic "name" "Other")
-            spdx)))))
-
-(defun build-snapshot (meta paths truncated &key date source picked-at quicklisp-project)
-  "A record for the repository described by META (GitHub repo JSON) and PATHS (its tree)."
+(defun build-snapshot (meta paths truncated &key ref date source picked-at quicklisp-project)
+  "The record for a repository: META is normalized metadata from FETCH-META, PATHS its file listing."
   (record "date" date
-          "repo" (jget meta "full_name")
+          "repo" (jget meta "full_name" (repo-ref-name ref))
+          "forge" (forge-name (repo-ref-forge ref))
+          "host" (repo-ref-host ref)
           "url" (jget meta "html_url")
           "description" (json-or-null (let ((d (jget meta "description"))) (unless (blank-p d) d)))
           "homepage" (json-or-null (let ((h (jget meta "homepage"))) (unless (blank-p h) h)))
           "language" (json-or-null (jget meta "language"))
-          "license" (json-or-null (license-id meta))
-          "stars" (jget meta "stargazers_count" 0)
-          "forks" (jget meta "forks_count" 0)
-          "open_issues" (jget meta "open_issues_count" 0)
+          "license" (json-or-null (or (jget meta "license")
+                                      (and (license-file-p paths) "see repository")))
+          "stars" (or (jget meta "stars") 0)
+          "forks" (or (jget meta "forks") 0)
+          "open_issues" (or (jget meta "open_issues") 0)
           "created_at" (json-or-null (jget meta "created_at"))
           "pushed_at" (json-or-null (jget meta "pushed_at"))
-          "archived" (json-bool (truthy (jget meta "archived")))
-          "fork" (json-bool (truthy (jget meta "fork")))
+          "archived" (json-bool (jget meta "archived"))
+          "fork" (json-bool (jget meta "fork"))
+          "mirror" (json-bool (jget meta "mirror"))
           "default_branch" (json-or-null (jget meta "default_branch"))
           "topics" (coerce (to-list (jget meta "topics")) 'vector)
           "has_readme" (json-bool (has-readme-p paths))

@@ -4,14 +4,16 @@
   (format stream "usage: habichuela <command> [options]
 
 commands:
-  pick [--dry-run] [--date YYYY-MM-DD] [--source quicklisp|github]
+  pick [--dry-run] [--date YYYY-MM-DD] [--source quicklisp|github|gitlab|codeberg]
                                          choose the repository for the day and record its stats
   refresh [--limit N] [--dry-run]        re-fetch stats for the N least recently refreshed records (default 25)
   build                                  write the static site to site/
-  pool                                   count the candidate pool
+  pool                                   count the Quicklisp candidate pool per forge
 
 environment:
   GITHUB_TOKEN          GitHub API token (strongly recommended)
+  GITLAB_TOKEN          GitLab token (optional; unlocks archived and issue counts)
+  CODEBERG_TOKEN        Codeberg token (optional)
   HABICHUELA_DATE       override today's date, YYYY-MM-DD
   HABICHUELA_BASE_URL   public URL of the site, used for links in feed.xml
   HABICHUELA_ROOT       project root (default: current directory)
@@ -19,9 +21,11 @@ environment:
 
 (defun parse-source (s)
   (cond ((null s) nil)
-        ((member s (quote ("quicklisp" "ql")) :test (function string-equal)) :quicklisp)
-        ((member s (quote ("github" "gh" "search")) :test (function string-equal)) :github)
-        (t (error "Unknown source ~s, want quicklisp or github" s))))
+        ((member s '("quicklisp" "ql") :test #'string-equal) :quicklisp)
+        ((member s '("github" "gh") :test #'string-equal) :github)
+        ((member s '("gitlab" "gl") :test #'string-equal) :gitlab)
+        ((member s '("codeberg" "cb") :test #'string-equal) :codeberg)
+        (t (error "Unknown source ~s, want quicklisp, github, gitlab or codeberg" s))))
 
 (defun flag-p (args name)
   (and (member name args :test #'string=) t))
@@ -36,7 +40,8 @@ environment:
         (rest (rest args)))
     (cond ((null cmd) (usage *error-output*) 2)
           ((string= cmd "pick")
-           (pick :dry-run (flag-p rest "--dry-run") :date (flag-value rest "--date" (today))
+           (pick :dry-run (flag-p rest "--dry-run")
+                 :date (flag-value rest "--date" (today))
                  :source (parse-source (flag-value rest "--source" nil)))
            0)
           ((string= cmd "refresh")
@@ -45,7 +50,10 @@ environment:
            0)
           ((string= cmd "build") (build-site) 0)
           ((string= cmd "pool")
-           (format t "~d GitHub-hosted Quicklisp projects~%" (length (pool-projects)))
+           (let ((projects (pool-projects)))
+             (format t "~d Quicklisp projects on forges we can read:~%" (length projects))
+             (loop for (forge . n) in (sort (pool-summary projects) #'> :key #'cdr)
+                   do (format t "  ~6d on ~a~%" n (forge-display forge))))
            0)
           ((member cmd '("help" "--help" "-h") :test #'string=) (usage) 0)
           (t (format *error-output* "unknown command: ~a~%~%" cmd) (usage *error-output*) 2))))
