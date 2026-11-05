@@ -28,9 +28,13 @@ jobs:
       url: ${{ steps.deploy.outputs.page_url }}
     env:
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      HABICHUELA_BASE_URL: https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/
     steps:
       - uses: actions/checkout@v4
+
+      - name: Read the Pages configuration (custom domain and base URL)
+        id: pages
+        uses: actions/configure-pages@v5
+        continue-on-error: true
 
       - name: Install SBCL
         run: |
@@ -74,6 +78,8 @@ jobs:
 
       - name: Build the site
         run: bin/habichuela build
+        env:
+          HABICHUELA_BASE_URL: ${{ steps.pages.outputs.base_url || 'https://habichue.la' }}/
 
       - uses: actions/upload-pages-artifact@v3
         with:

@@ -63,9 +63,24 @@ make serve                # preview at http://localhost:8000/
 
 ## One-time GitHub setup
 
+The site is served at https://habichue.la/.
+
 1. Create the `habichuela` repository on GitHub and push this tree.
 2. Settings, Pages, "Build and deployment", set Source to "GitHub Actions".
-3. Actions, "daily", "Run workflow" to seed the first pick, or wait for the schedule.
+3. Under "Custom domain" on the same page, enter `habichue.la` and save.
+   GitHub recommends verifying the domain for your account first (your
+   profile settings, Pages, "Add a domain") to prevent takeovers.
+4. At the registrar, point the apex at GitHub Pages and remove any URL
+   forwarding record: A records 185.199.108.153, 185.199.109.153,
+   185.199.110.153, 185.199.111.153, and AAAA records 2606:50c0:8000::153,
+   2606:50c0:8001::153, 2606:50c0:8002::153, 2606:50c0:8003::153.
+   Optionally add a `www` CNAME to `juliojimenez.github.io`.
+5. Once GitHub has issued the certificate (up to a day), tick "Enforce HTTPS".
+6. Actions, "daily", "Run workflow" to seed the first pick, or wait for the schedule.
+
+The workflow reads the Pages configuration with `actions/configure-pages`, so
+the absolute links in `feed.xml` follow whatever domain is set there. Local
+builds default to `https://habichue.la/`; override with `HABICHUELA_BASE_URL`.
 
 ## Data
 
