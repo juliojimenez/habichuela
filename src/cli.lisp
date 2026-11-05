@@ -92,6 +92,8 @@ environment:
   (sb-ext:disable-debugger)
   (let ((code (unwind-protect
                    (handler-case (main (rest sb-ext:*posix-argv*))
+                     ;; The reader went away, as with `habichuela pool | head`. Not an error.
+                     (sb-int:broken-pipe () 0)
                      (sb-sys:interactive-interrupt ()
                        (format *error-output* "~&interrupted~%")
                        130)
@@ -99,8 +101,8 @@ environment:
                        (format *error-output* "~&error: ~a~%" e)
                        1))
                 (cleanup-clones))))
-    (finish-output *standard-output*)
-    (finish-output *error-output*)
+    (ignore-errors (finish-output *standard-output*))
+    (ignore-errors (finish-output *error-output*))
     (uiop:quit (or code 0))))
 
 (defun save-executable (path)
