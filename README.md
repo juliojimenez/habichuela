@@ -119,8 +119,13 @@ see each pick exactly once.
 named like `foo-test.asd`, `tests.lisp` or `run-tests.sh`. `has_ci` looks for
 GitHub Actions, GitLab CI, Forgejo and Gitea Actions, Travis, CircleCI, Drone,
 Woodpecker, Cirrus, sourcehut builds and a few others. `license` is the forge's
-detected license; when the forge reports none but a LICENSE or COPYING file
-exists, it reads "see repository".
+detected license when it names one. Otherwise the LICENSE or COPYING file is
+fetched and identified from its wording (MIT, the BSD variants, Apache-2.0, the
+GPL family including LLGPL, public-domain dedications, MPL-2.0, ISC, 0BSD,
+Unlicense, Zlib, CC0-1.0 and a few more), and failing that the `:license`
+string of the ASDF system definition is read. `license_from` says whether the
+value came from the `forge`, the `file` or the `asd`. A license file nobody
+could read reads "see repository".
 
 ## Known limitations
 

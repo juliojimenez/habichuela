@@ -9,6 +9,7 @@ commands:
   refresh [--limit N] [--dry-run]        re-fetch stats for the N least recently refreshed records (default 25)
   build                                  write the static site to site/
   pool                                   count the Quicklisp candidate pool per forge
+  license <owner/name | host/owner/name>  show how the license of one repository is determined
 
 environment:
   GITHUB_TOKEN          GitHub API token (strongly recommended)
@@ -54,6 +55,18 @@ environment:
              (format t "~d Quicklisp projects on forges we can read:~%" (length projects))
              (loop for (forge . n) in (sort (pool-summary projects) #'> :key #'cdr)
                    do (format t "  ~6d on ~a~%" n (forge-display forge))))
+           0)
+          ((string= cmd "license")
+           (let* ((target (or (first rest) (error "usage: habichuela license owner/name | host/owner/name")))
+                  (url (cond ((search "://" target) target)
+                             ((= (count #\/ target) 1) (format nil "https://github.com/~a" target))
+                             (t (format nil "https://~a" target))))
+                  (ref (or (parse-repo-url url) (error "Not a repository on a forge we read: ~a" target))))
+             (multiple-value-bind (meta paths) (fetch-repo ref)
+               (multiple-value-bind (license from) (resolve-license ref meta paths)
+                 (format t "~a~%  forge says:   ~a~%  license file: ~a~%  result:       ~a~@[ (from ~a)~]~%"
+                         (ref-label ref) (or (jget meta "license") "none")
+                         (or (license-file paths (repo-ref-name ref)) "none") (or license "none") from))))
            0)
           ((member cmd '("help" "--help" "-h") :test #'string=) (usage) 0)
           (t (format *error-output* "unknown command: ~a~%~%" cmd) (usage *error-output*) 2))))

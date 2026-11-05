@@ -12,6 +12,7 @@
                (:file "forges")
                (:file "pool")
                (:file "discover")
+               (:file "license")
                (:file "stats")
                (:file "pick")
                (:file "site")
