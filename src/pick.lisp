@@ -40,7 +40,7 @@ other forges have no star minimum: stars are scarce there and the list is curate
     (:codeberg "Codeberg search")))
 
 (defun forge-display (forge)
-  (ecase forge (:github "GitHub") (:gitlab "GitLab") (:codeberg "Codeberg")))
+  (ecase forge (:github "GitHub") (:gitlab "GitLab") (:codeberg "Codeberg") (:git "other Git hosts")))
 
 (defun fetch-repo (ref)
   "Normalized metadata plus the file listing: (values meta paths truncated)."

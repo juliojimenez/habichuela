@@ -11,6 +11,7 @@
                (:file "store")
                (:file "http")
                (:file "forges")
+               (:file "git")
                (:file "pool")
                (:file "discover")
                (:file "license")

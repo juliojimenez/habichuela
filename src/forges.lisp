@@ -25,13 +25,13 @@ so a project mirrored on two forges is featured once."
 
 (defun forge-name (forge) (string-downcase (symbol-name forge)))
 
-(defparameter *unreachable-hosts* '("gitlab.common-lisp.net")
-  "Forge hosts whose API we cannot use. gitlab.common-lisp.net answers every
-request, API included, with an anti-bot challenge page.")
+(defparameter *clone-only-hosts* '("gitlab.common-lisp.net")
+  "Hosts read through a shallow git clone instead of an API, see git.lisp.
+gitlab.common-lisp.net answers every API call with an anti-bot challenge page.")
 
 (defun forge-for-host (host)
   (let ((h (lc host)))
-    (cond ((member h *unreachable-hosts* :test #'string=) nil)
+    (cond ((member h *clone-only-hosts* :test #'string=) :git)
           ((string= h "github.com") :github)
           ((string= h "codeberg.org") :codeberg)
           ((or (string= h "gitlab.com") (starts-with "gitlab." h)) :gitlab))))
@@ -58,7 +58,7 @@ request, API included, with an anti-bot challenge page.")
         (let* ((end (position-if (lambda (c) (member c '(#\Space #\Tab #\Return))) path))
                (parts (remove "" (uiop:split-string (subseq path 0 end) :separator "/") :test #'string=))
                ;; GitLab web paths continue with /-/tree/..., and nested groups are allowed.
-               (parts (if (eq forge :gitlab)
+               (parts (if (member forge '(:gitlab :git))
                           (subseq parts 0 (or (position "-" parts :test #'string=) (length parts)))
                           (subseq parts 0 (min 2 (length parts))))))
           (when (>= (length parts) 2)
@@ -88,14 +88,14 @@ request, API included, with an anti-bot challenge page.")
              (alex:when-let (token (env "CODEBERG_TOKEN"))
                (list (cons "Authorization" (format nil "token ~a" token))))))))
 
-(defun api-url (forge host path)
+(defun forge-api-url (forge host path)
   (ecase forge
     (:github (format nil "https://api.github.com~a" path))
     (:gitlab (format nil "https://~a/api/v4~a" host path))
     (:codeberg (format nil "https://~a/api/v1~a" host path))))
 
 (defun forge-get (forge host path)
-  (api-get (api-url forge host path) :headers (forge-headers forge)))
+  (api-get (forge-api-url forge host path) :headers (forge-headers forge)))
 
 (defun ref-get (ref path)
   (forge-get (repo-ref-forge ref) (repo-ref-host ref) path))
@@ -237,23 +237,6 @@ request, API included, with an anti-bot challenge page.")
           return (values (nreverse paths) nil)
         finally (return (values (nreverse paths) t))))
 
-;;; Dispatch
-
-(defun fetch-meta (ref)
-  "Normalized metadata for REF: full_name, html_url, description, homepage, language,
-license, stars, forks, open_issues, created_at, pushed_at, archived, fork, mirror,
-disabled, default_branch, topics (a list) and owner."
-  (ecase (repo-ref-forge ref)
-    (:github (github-meta ref))
-    (:gitlab (gitlab-meta ref))
-    (:codeberg (codeberg-meta ref))))
-
-(defun fetch-tree (ref branch)
-  "Paths of every blob and tree in BRANCH, and whether the listing was cut short."
-  (ecase (repo-ref-forge ref)
-    (:github (github-tree ref branch))
-    (:gitlab (gitlab-tree ref branch))
-    (:codeberg (codeberg-tree ref branch))))
 
 ;;; Raw files
 

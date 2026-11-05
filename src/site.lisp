@@ -94,12 +94,14 @@ footer { padding: 2rem 1rem 3rem; color: var(--muted); font-size: .9rem; }
       (let ((home (jget rec "homepage")))
         (when home (:p :class "homepage" (:a :href home home))))
       (:ul :class "chips"
-        (:li (format nil "★ ~a" (fmt-int (jget rec "stars"))))
+        (let ((stars (jget rec "stars")))
+          (when (integerp stars) (:li (format nil "★ ~a" (fmt-int stars)))))
         (:li (format nil "Updated ~a" (updated-text (jget rec "pushed_at"))))
         (:li (format nil "License: ~a" (or (jget rec "license") "none")))
         (:li (format nil "Tests: ~a" (yes-no (jget rec "has_tests"))))
         (:li (format nil "CI: ~a" (yes-no (jget rec "has_ci"))))
-        (:li (format nil "Open issues: ~a" (fmt-int (jget rec "open_issues"))))
+        (let ((issues (jget rec "open_issues")))
+          (when (integerp issues) (:li (format nil "Open issues: ~a" (fmt-int issues)))))
         (let ((ql (jget rec "quicklisp_project")))
           (if ql (:li (format nil "Quicklisp: ~a" ql)) (:li "Not in Quicklisp")))
         (let ((host (other-forge-host rec)))
@@ -126,7 +128,7 @@ footer { padding: 2rem 1rem 3rem; color: var(--muted); font-size: .9rem; }
                    (let ((host (other-forge-host r)))
                      (when host (:span :class "host" (format nil " · ~a" host))))
                    (:div :class "desc" (or (jget r "description") "")))
-              (:td :class "num" (fmt-int (jget r "stars")))
+              (:td :class "num" (let ((s (jget r "stars"))) (if (integerp s) (fmt-int s) "n/a")))
               (:td :class "updated" :title (or (jget r "pushed_at") "") (date-part (jget r "pushed_at")))
               (:td (yes-no (jget r "has_tests")))
               (:td (yes-no (jget r "has_ci")))
@@ -190,9 +192,9 @@ footer { padding: 2rem 1rem 3rem; color: var(--muted); font-size: .9rem; }
                (t (write-char c out))))))
 
 (defun entry-summary (r)
-  (format nil "~@[~a ~]★ ~a · updated ~a · license ~a · tests ~a · CI ~a"
+  (format nil "~@[~a ~]~@[★ ~a · ~]updated ~a · license ~a · tests ~a · CI ~a"
           (jget r "description")
-          (fmt-int (jget r "stars"))
+          (let ((s (jget r "stars"))) (and (integerp s) (fmt-int s)))
           (date-part (jget r "pushed_at"))
           (or (jget r "license") "none")
           (yes-no (jget r "has_tests"))
