@@ -7,7 +7,8 @@
   "description": "Common Lisp FFI for libgvc aka graphviz",
   "homepage": null,
   "language": "Common Lisp",
-  "license": "Other",
+  "license": "Public domain",
+  "license_from": "file",
   "stars": 4,
   "forks": 0,
   "open_issues": 1,
@@ -34,5 +35,5 @@
   "quicklisp_project": "hu.dwim.graphviz",
   "source": "quicklisp",
   "picked_at": "2026-11-05T02:15:59Z",
-  "fetched_at": "2026-11-05T11:42:26Z"
+  "fetched_at": "2026-11-05T13:47:17Z"
 }
