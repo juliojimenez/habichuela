@@ -63,11 +63,13 @@ cooldown, attempt budget.
 
 ## Local use
 
-Requirements: SBCL, git, curl, make. The GitHub token comes from `gh auth token`
-when `GITHUB_TOKEN` is not set. `GITLAB_TOKEN` and `CODEBERG_TOKEN` are optional.
+Requirements: SBCL, [ocicl](https://github.com/ocicl/ocicl) (`brew install ocicl`
+or the apt repository, then `ocicl setup` once), git, curl, make. The GitHub
+token comes from `gh auth token` when `GITHUB_TOKEN` is not set. `GITLAB_TOKEN`
+and `CODEBERG_TOKEN` are optional.
 
 ```sh
-make deps                 # project-local Quicklisp pinned to quicklisp-dist.txt
+make deps                 # fetch the dependencies locked in ocicl.csv into ocicl/
 make pool                 # fetch or update the Quicklisp projects list
 make bin                  # build bin/habichuela
 make pick ARGS=--dry-run  # show the pick for today without writing it
@@ -83,6 +85,12 @@ make serve                # preview at http://localhost:8000/
 the Quicklisp pool per forge. `bin/habichuela inspect <repo>` prints the record
 that would be written for any repository, on any forge. `data/exclude.txt` lists repositories that must
 never be featured, as `owner/name` or `host/owner/name`.
+
+Dependencies are locked in `ocicl.csv`: every system pinned to a sha256 digest,
+fetched over HTTPS from ghcr.io by ocicl, whose own TLS is pure Lisp. The
+workflow installs a pinned ocicl release, verifies its checksum, and builds in
+local-only mode so nothing outside the lockfile is used. To upgrade, run
+`ocicl latest` and commit the new `ocicl.csv`.
 
 ## Site
 
@@ -144,10 +152,6 @@ could read reads "see repository".
   counts or creation date; those fields are null and the site shows "n/a".
 - Without a `GITLAB_TOKEN`, GitLab's API hides the archived flag, the mirror
   flag and the open issue count; those read as false and 0.
-- Dependencies come from a Quicklisp dist pinned by date in
-  `quicklisp-dist.txt`. The Quicklisp client itself downloads over plain HTTP
-  and verifies archives against the dist index. Switching to ocicl or qlot is
-  the upgrade path if that matters to you.
 - GitHub's cron is best effort: the daily run can start late.
 - HTTP requests go through curl, driven from Lisp, instead of a Lisp HTTP client.
   Every Lisp client depends on cl+ssl, which does not work with OpenSSL 4,
