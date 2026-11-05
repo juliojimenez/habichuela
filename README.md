@@ -47,9 +47,12 @@ How each forge is searched:
 
 - GitHub: repository search, one random month of creation dates at a time,
   since search returns at most 1,000 results per query.
-- GitLab: the `common-lisp` topic, then a name-and-description search for
-  "lisp" in a random month of activity. GitLab's own language filter returns a
-  server error for Common Lisp, so the primary language is checked per project.
+- GitLab: the `common-lisp` topic plus a name-and-description search for
+  "lisp" restricted to projects that use Common Lisp, sampling one of the six
+  most recently active pages by seed. GitLab's language filter on its own times
+  out for all but the biggest languages, so a keyword-only search in a random
+  month of activity is the fallback. The primary language is still checked per
+  project.
 - Codeberg: the `common-lisp` topic plus a name-and-description search, both
   filtered on the primary language the API reports.
 
