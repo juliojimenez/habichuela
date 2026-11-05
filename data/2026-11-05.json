@@ -1,6 +1,8 @@
 {
   "date": "2026-11-05",
   "repo": "hu-dwim/hu.dwim.graphviz",
+  "forge": "github",
+  "host": "github.com",
   "url": "https://github.com/hu-dwim/hu.dwim.graphviz",
   "description": "Common Lisp FFI for libgvc aka graphviz",
   "homepage": null,
@@ -13,6 +15,7 @@
   "pushed_at": "2021-12-01T12:01:54Z",
   "archived": false,
   "fork": false,
+  "mirror": false,
   "default_branch": "main",
   "topics": [
     "common-lisp",
@@ -30,5 +33,6 @@
   "tree_truncated": false,
   "quicklisp_project": "hu.dwim.graphviz",
   "source": "quicklisp",
-  "fetched_at": "2026-11-05T02:15:59Z"
+  "picked_at": "2026-11-05T02:15:59Z",
+  "fetched_at": "2026-11-05T11:19:30Z"
 }
