@@ -9,7 +9,7 @@
   "language": "Common Lisp",
   "license": "MIT",
   "license_from": "forge",
-  "stars": 1,
+  "stars": 2,
   "forks": 1,
   "open_issues": 0,
   "created_at": "2024-03-15T20:03:43.109Z",
@@ -34,5 +34,5 @@
   "quicklisp_project": null,
   "source": "gitlab",
   "picked_at": "2026-11-06T20:13:44Z",
-  "fetched_at": "2026-11-06T20:13:46Z"
+  "fetched_at": "2026-11-06T20:26:42Z"
 }

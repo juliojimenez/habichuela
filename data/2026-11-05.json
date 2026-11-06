@@ -9,7 +9,7 @@
   "language": "Common Lisp",
   "license": "Public domain",
   "license_from": "file",
-  "stars": 4,
+  "stars": 5,
   "forks": 0,
   "open_issues": 1,
   "created_at": "2021-02-09T11:27:09Z",
@@ -35,5 +35,5 @@
   "quicklisp_project": "hu.dwim.graphviz",
   "source": "quicklisp",
   "picked_at": "2026-11-05T02:15:59Z",
-  "fetched_at": "2026-11-06T20:13:45Z"
+  "fetched_at": "2026-11-06T20:26:41Z"
 }
