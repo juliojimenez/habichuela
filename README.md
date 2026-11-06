@@ -36,12 +36,13 @@ from the same workflow run.
 4. The data is committed, then `habichuela build` writes `site/` and the
    workflow deploys it to GitHub Pages.
 
-A candidate must be: not a fork or mirror, not archived, with a description and
-a README, not featured before (the same owner/name on another forge counts as
-featured), from an owner not featured in the last 30 days. Star counts do not matter:
-a repository with a description and a README is worth a look however small.
-Search picks must also have Common Lisp as their primary language. When a search source yields nothing
-eligible, the day falls back to the Quicklisp list.
+A candidate must be: not a fork or mirror, not archived, with a description, not
+featured before (the same owner/name on another forge counts as featured), and
+from an owner not featured in the last 30 days. Star counts, READMEs and whether
+Common Lisp is the primary language do not matter: the search channels already
+ask the forges for Common Lisp repositories, and a repository worth a description
+is worth a look however small. When a search source yields nothing eligible, the
+day falls back to the Quicklisp list.
 
 How each forge is searched:
 
@@ -51,8 +52,8 @@ How each forge is searched:
   "lisp" restricted to projects that use Common Lisp, sampling one of the six
   most recently active pages by seed. GitLab's language filter on its own times
   out for all but the biggest languages, so a keyword-only search in a random
-  month of activity is the fallback. The primary language is still checked per
-  project.
+  month of activity is the fallback. Candidates that mention lisp but use
+  it only a little are accepted; the pick shows the language the forge reports.
 - Codeberg: the `common-lisp` topic plus a name-and-description search, both
   filtered on the primary language the API reports.
 
