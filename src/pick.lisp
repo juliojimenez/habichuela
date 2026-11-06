@@ -5,9 +5,8 @@
 ;;;   :github, :gitlab, :codeberg  discovery on that forge, see discover.lisp
 ;;; A rerun on the same day makes the same choices.
 
-(defparameter *min-stars* 2
-  "Minimum stars for Quicklisp projects hosted on GitHub. Quicklisp projects on the
-other forges have no star minimum: stars are scarce there and the list is curated.")
+(defparameter *min-stars* 0
+  "Minimum stars for Quicklisp projects. Zero: the list is curated already.")
 (defparameter *discovery-share* 1/2
   "Share of days that look outside Quicklisp.")
 (defparameter *discovery-forges* '((:github . 3) (:gitlab . 1) (:codeberg . 1))
@@ -139,21 +138,28 @@ MIN-STARS is a number or a function of the ref. Returns the record or NIL."
 (defun pick-from-discovery (forge &key date taken recent dry-run)
   (let* ((seed (date-seed date))
          (index (quicklisp-index (pool-projects))))
-    (log-line "~a: Common Lisp repositories with at least ~d star~:p that are not in Quicklisp"
-              (source-label forge) (discovery-min-stars forge))
+    (log-line "~a: Common Lisp repositories not in Quicklisp~@[, at least ~d stars~]"
+              (source-label forge) (let ((n (discovery-min-stars forge))) (and (plusp n) n)))
     (dolist (batch (candidate-batches forge date (+ seed 1)) nil)
       (when (<= *attempts-left* 0)
         (return nil))
       (let ((candidates (remove-if (lambda (ref) (or (gethash (ref-key ref) index) (taken-p ref taken)))
                                    (handler-case (funcall batch)
-                                     (api-error (e)
+                                     (error (e)
                                        (log-line "  search failed: ~a" e)
                                        nil)))))
         (when candidates
-          (let ((rec (try-candidates (seeded-shuffle candidates (+ seed 2))
-                                     :date date :source (forge-name forge) :recent recent
-                                     :dry-run dry-run :min-stars (discovery-min-stars forge)
-                                     :require-language "Common Lisp")))
+          (let ((rec (handler-case
+                         (try-candidates (seeded-shuffle candidates (+ seed 2))
+                                         :date date :source (forge-name forge) :recent recent
+                                         :dry-run dry-run :min-stars (discovery-min-stars forge)
+                                         :require-language "Common Lisp")
+                       (api-error (e)
+                         ;; Rate limited or refused by this forge: leave it alone for today.
+                         (if (member (api-status e) '(401 403 429))
+                             (progn (log-line "  ~a, leaving ~a for today" e (source-label forge))
+                                    (return nil))
+                             (error e))))))
             (when rec (return rec))))))))
 
 (defun pick (&key dry-run (date (today)) source)

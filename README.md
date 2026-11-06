@@ -38,10 +38,9 @@ from the same workflow run.
 
 A candidate must be: not a fork or mirror, not archived, with a description and
 a README, not featured before (the same owner/name on another forge counts as
-featured), from an owner not featured in the last 30 days, and starred enough:
-2 stars for Quicklisp projects on GitHub, none for Quicklisp projects elsewhere,
-3 for GitHub search, 1 for GitLab and Codeberg search. Search picks must also
-have Common Lisp as their primary language. When a search source yields nothing
+featured), from an owner not featured in the last 30 days. Star counts do not matter:
+a repository with a description and a README is worth a look however small.
+Search picks must also have Common Lisp as their primary language. When a search source yields nothing
 eligible, the day falls back to the Quicklisp list.
 
 How each forge is searched:
@@ -58,8 +57,8 @@ How each forge is searched:
   filtered on the primary language the API reports.
 
 The knobs are `defparameter`s at the top of `src/pick.lisp` and
-`src/discover.lisp`: discovery share and forge odds, star minimums, owner
-cooldown, attempt budget.
+`src/discover.lisp`: discovery share and forge odds, star minimums (all zero by
+default), owner cooldown, attempt budget.
 
 ## Local use
 
