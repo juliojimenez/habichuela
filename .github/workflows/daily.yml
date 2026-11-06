@@ -2,8 +2,11 @@ name: daily
 
 on:
   schedule:
-    # 14:17 UTC every day. GitHub's cron drifts by minutes, sometimes longer, at busy times.
+    # 14:17 UTC every day, and again at 20:17 UTC as a safety net: GitHub's cron drifts
+    # by minutes to hours and sometimes skips a slot. The pick is a no-op once the day
+    # has a record, so the second run only ever refreshes stats and redeploys.
     - cron: "17 14 * * *"
+    - cron: "17 20 * * *"
   workflow_dispatch:
     inputs:
       dry_run:

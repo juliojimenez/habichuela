@@ -15,10 +15,10 @@
 ;;;   Codeberg  the common-lisp topic plus a name/description search, both
 ;;;             filtered on the primary language reported by the API
 
-(defparameter *discovery-min-stars* '((:github . 3) (:gitlab . 1) (:codeberg . 1))
-  "Minimum stars for repositories found through search, per forge. There is no
-curation there, so GitHub gets a higher bar than Quicklisp's; the smaller forges
-hand out far fewer stars.")
+(defparameter *discovery-min-stars* '((:github . 0) (:gitlab . 0) (:codeberg . 0))
+  "Minimum stars for repositories found through search, per forge. Zero: a repository
+with a description, a README and Common Lisp as its language is worth a look whatever
+its star count. Raise a forge's entry to filter.")
 (defparameter *discovery-max-windows* 8
   "GitHub: months to search before giving up on discovery for the day.")
 (defparameter *codeberg-search-pages* 3
@@ -28,7 +28,7 @@ hand out far fewer stars.")
 recently active first. Deeper pages approach gitlab.com's 15 second statement timeout.")
 
 (defun discovery-min-stars (forge)
-  (or (cdr (assoc forge *discovery-min-stars*)) 1))
+  (or (cdr (assoc forge *discovery-min-stars*)) 0))
 
 ;;; Month windows
 
@@ -68,8 +68,9 @@ recently active first. Deeper pages approach gitlab.com's 15 second statement ti
             (to-list (jget j "items")))))
 
 (defun github-window-query (year month)
-  (format nil "language:\"Common Lisp\" stars:>=~d fork:false archived:false created:~a..~a"
-          (discovery-min-stars :github) (month-start year month) (month-end year month)))
+  (format nil "language:\"Common Lisp\"~@[ stars:>=~d~] fork:false archived:false created:~a..~a"
+          (let ((n (discovery-min-stars :github))) (and (plusp n) n))
+          (month-start year month) (month-end year month)))
 
 ;;; GitLab
 
@@ -128,9 +129,9 @@ The language filter on its own times out (#5); combined with a search it answers
 ;;; Batches
 
 (defmacro quietly (form)
-  "Evaluate FORM, turning an API failure into an empty result with a log line."
+  "Evaluate FORM, turning any failure into an empty result with a log line."
   `(handler-case ,form
-     (api-error (e)
+     (error (e)
        (log-line "  ~a, skipping this channel" e)
        nil)))
 
