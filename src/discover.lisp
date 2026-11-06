@@ -10,8 +10,7 @@
 ;;;             restricted to projects that use Common Lisp (one seeded page of
 ;;;             the most recently active); GitLab's language filter alone times
 ;;;             out for all but the biggest languages (#5), so a keyword-only
-;;;             search in a random month of activity is the fallback. The
-;;;             primary language is still verified per project.
+;;;             search in a random month of activity is the fallback.
 ;;;   Codeberg  the common-lisp topic plus a name/description search, both
 ;;;             filtered on the primary language reported by the API
 

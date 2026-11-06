@@ -61,7 +61,7 @@ Authentication and rate-limit failures are re-signalled."
       (log-line "  ~a: ~a, skipping" (ref-label ref) e)
       nil)))
 
-(defun ineligible-reason (meta paths recent-owners min-stars require-language)
+(defun ineligible-reason (meta paths recent-owners min-stars)
   "A short reason when the repository is not worth featuring today, else NIL."
   (let ((stars (or (jget meta "stars") 0))
         (owner (lc (jget meta "owner" ""))))
@@ -70,9 +70,6 @@ Authentication and rate-limit failures are re-signalled."
           ((jget meta "archived") "archived")
           ((jget meta "disabled") "disabled")
           ((blank-p (jget meta "description")) "no description")
-          ((not (has-readme-p paths)) "no README")
-          ((and require-language (not (equal (jget meta "language") require-language)))
-           (format nil "primary language is ~a" (or (jget meta "language") "unknown")))
           ((< stars min-stars) (format nil "only ~d star~:p" stars))
           ((member owner recent-owners :test #'string=)
            (format nil "~a was featured in the last ~d days" owner *owner-cooldown-days*)))))
@@ -86,7 +83,7 @@ Authentication and rate-limit failures are re-signalled."
          (save-record rec)
          (log-line "Picked ~a for ~a, wrote ~a" (record-repo rec) date (record-path date)))))
 
-(defun try-candidates (refs &key date source recent dry-run min-stars require-language
+(defun try-candidates (refs &key date source recent dry-run min-stars
                                  (quicklisp-name (constantly nil)))
   "Inspect REFS in order until one is eligible, spending *ATTEMPTS-LEFT*.
 MIN-STARS is a number or a function of the ref. Returns the record or NIL."
@@ -99,8 +96,7 @@ MIN-STARS is a number or a function of the ref. Returns the record or NIL."
       (multiple-value-bind (meta paths truncated) (fetch-candidate ref)
         (when meta
           (let ((why (ineligible-reason meta paths recent
-                                        (if (functionp min-stars) (funcall min-stars ref) min-stars)
-                                        require-language)))
+                                        (if (functionp min-stars) (funcall min-stars ref) min-stars))))
             (if why
                 (log-line "  skipped: ~a" why)
                 (let ((rec (build-snapshot meta paths truncated
@@ -152,8 +148,7 @@ MIN-STARS is a number or a function of the ref. Returns the record or NIL."
           (let ((rec (handler-case
                          (try-candidates (seeded-shuffle candidates (+ seed 2))
                                          :date date :source (forge-name forge) :recent recent
-                                         :dry-run dry-run :min-stars (discovery-min-stars forge)
-                                         :require-language "Common Lisp")
+                                         :dry-run dry-run :min-stars (discovery-min-stars forge))
                        (api-error (e)
                          ;; Rate limited or refused by this forge: leave it alone for today.
                          (if (member (api-status e) '(401 403 429))

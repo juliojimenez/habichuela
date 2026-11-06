@@ -13,6 +13,14 @@ on:
         description: "Pick and build, but do not commit data or deploy"
         type: boolean
         default: false
+      date:
+        description: "Pick for this date instead of today (YYYY-MM-DD)"
+        type: string
+        default: ""
+      source:
+        description: "Force a source: quicklisp, github, gitlab or codeberg"
+        type: string
+        default: ""
 
 permissions:
   contents: write
@@ -75,7 +83,7 @@ jobs:
         run: make bin
 
       - name: Pick the repository of the day
-        run: bin/habichuela pick ${{ inputs.dry_run && '--dry-run' || '' }}
+        run: bin/habichuela pick ${{ inputs.dry_run && '--dry-run' || '' }} ${{ inputs.date && format('--date {0}', inputs.date) || '' }} ${{ inputs.source && format('--source {0}', inputs.source) || '' }}
 
       - name: Refresh stale stats
         run: bin/habichuela refresh --limit 25 ${{ inputs.dry_run && '--dry-run' || '' }}

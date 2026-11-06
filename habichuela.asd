@@ -13,6 +13,7 @@
   :components ((:file "package")
                (:file "util")
                (:file "store")
+               (:file "tls")
                (:file "http")
                (:file "forges")
                (:file "git")
