@@ -33,7 +33,8 @@
   ],
   "tree_truncated": false,
   "quicklisp_project": "hu.dwim.graphviz",
+  "ultralisp_project": null,
   "source": "quicklisp",
   "picked_at": "2026-11-05T02:15:59Z",
-  "fetched_at": "2026-11-07T00:07:19Z"
+  "fetched_at": "2026-11-07T11:53:53Z"
 }

@@ -9,7 +9,7 @@
   "language": "Common Lisp",
   "license": null,
   "license_from": null,
-  "stars": 2,
+  "stars": 3,
   "forks": 1,
   "open_issues": 0,
   "created_at": "2010-03-12T05:53:57Z",
@@ -25,7 +25,8 @@
   "asd_systems": [],
   "tree_truncated": false,
   "quicklisp_project": null,
+  "ultralisp_project": null,
   "source": "github",
   "picked_at": "2026-11-07T00:07:18Z",
-  "fetched_at": "2026-11-07T00:07:20Z"
+  "fetched_at": "2026-11-07T11:53:54Z"
 }
