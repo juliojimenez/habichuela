@@ -100,9 +100,12 @@ cl+ssl-compatible layer first and marks cl+ssl as already provided.
 ## Site
 
 `static/` is copied into the site as is. `static/bean.png` is the logo,
-favicon and link-preview image. The footer links the X, Mastodon and Bluesky
-accounts with `rel="me"`, which is what Mastodon uses to verify a profile link.
-Both lists live at the top of `src/site.lisp`.
+favicon and link-preview image; the other PNGs are the forge, social and
+yes/no icons, one light and one dark variant each, swapped with a
+`prefers-color-scheme` media query. The footer links the X, Mastodon and
+Bluesky accounts with `rel="me"`, which is what Mastodon uses to verify a
+profile link, and the source repository. The lists live at the top of
+`src/site.lisp`.
 
 ## One-time GitHub setup
 
@@ -131,8 +134,8 @@ builds default to `https://habichue.la/`; override with `HABICHUELA_BASE_URL`.
 repo, forge, host, url, description, homepage, language, license, stars, forks,
 open_issues, created_at, pushed_at, archived, fork, mirror, default_branch,
 topics, has_readme, has_tests, has_ci, asd_systems, tree_truncated,
-quicklisp_project, source (`quicklisp`, `github`, `gitlab` or `codeberg`),
-picked_at, fetched_at. The site publishes the same records as `data.json`, and
+quicklisp_project, ultralisp_project, source (`quicklisp`, `github`, `gitlab`
+or `codeberg`), picked_at, fetched_at. The site publishes the same records as `data.json`, and
 the 50 most recent picks as `feed.xml`. Feed entries have stable `tag:` ids and
 carry the time the pick was made, so RSS-to-social services such as dlvr.it
 see each pick exactly once.
@@ -147,7 +150,12 @@ GPL family including LLGPL, public-domain dedications, MPL-2.0, ISC, 0BSD,
 Unlicense, Zlib, CC0-1.0 and a few more), and failing that the `:license`
 string of the ASDF system definition is read. `license_from` says whether the
 value came from the `forge`, the `file` or the `asd`. A license file nobody
-could read reads "see repository".
+could read reads "see repository". `ultralisp_project` is the repository's
+name in the [Ultralisp](https://ultralisp.org) dist (owner and name joined
+with a hyphen) when the current Ultralisp release index lists it; the index is
+read from dist.ultralisp.org once per run, and when it cannot be fetched the
+value already on record is kept. Records written before this field existed get
+it on their next refresh.
 
 ## Known limitations
 

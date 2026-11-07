@@ -72,7 +72,8 @@ environment:
           ((string= cmd "inspect")
            (let ((ref (target-ref (first rest))))
              (multiple-value-bind (meta paths truncated) (fetch-repo ref)
-               (jzon:stringify (build-snapshot meta paths truncated :ref ref :date (today) :source "inspect")
+               (jzon:stringify (build-snapshot meta paths truncated :ref ref :date (today) :source "inspect"
+                                               :ultralisp-project (ultralisp-project ref))
                                :stream *standard-output* :pretty t)
                (terpri)))
            0)
