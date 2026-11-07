@@ -65,7 +65,8 @@
 (defun has-readme-p (paths)
   (not (null (some (lambda (p) (and (not (find #\/ p)) (starts-with "readme" (lc p)))) paths))))
 
-(defun build-snapshot (meta paths truncated &key ref date source picked-at quicklisp-project)
+(defun build-snapshot (meta paths truncated &key ref date source picked-at
+                                                  quicklisp-project ultralisp-project)
   "The record for a repository: META is normalized metadata from FETCH-META, PATHS its file listing."
   (multiple-value-bind (license license-from) (resolve-license ref meta paths)
     (record "date" date
@@ -94,6 +95,7 @@
           "asd_systems" (coerce (asd-systems paths) 'vector)
           "tree_truncated" (json-bool truncated)
           "quicklisp_project" (json-or-null quicklisp-project)
+          "ultralisp_project" (json-or-null ultralisp-project)
           "source" (json-or-null source)
           "picked_at" (json-or-null picked-at)
           "fetched_at" (now-iso))))

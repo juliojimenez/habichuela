@@ -18,6 +18,7 @@
                (:file "forges")
                (:file "git")
                (:file "pool")
+               (:file "ultralisp")
                (:file "discover")
                (:file "license")
                (:file "stats")

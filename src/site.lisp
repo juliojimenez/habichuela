@@ -5,9 +5,12 @@
 (defparameter *tag-authority* "habichue.la"
   "Authority for the tag: URIs that identify feed entries. Never changes, even if the site moves.")
 (defparameter *socials*
-  '(("X" . "https://x.com/habicuela")
-    ("Mastodon" . "https://mastodon.social/@habichuela")
-    ("Bluesky" . "https://bsky.app/profile/habichue.la")))
+  '(("X" "x" "https://x.com/habicuela")
+    ("Mastodon" "mastodon" "https://mastodon.social/@habichuela")
+    ("Bluesky" "bluesky" "https://bsky.app/profile/habichue.la"))
+  "Footer profile links: label, icon stem, URL. Icons are static/STEM-light.png and STEM-dark.png.")
+(defparameter *repo-url* "https://github.com/juliojimenez/habichuela"
+  "The source repository, linked from the footer with the GitHub icon.")
 (defparameter *logo-file* "bean.png"
   "Logo and favicon, copied from static/ into the site. When the file is missing the
 header, favicon and preview image are simply left out.")
@@ -56,7 +59,13 @@ td.date { white-space: nowrap; color: var(--muted); }
 td.updated { white-space: nowrap; }
 .desc, .host { color: var(--muted); font-size: .9rem; }
 footer { padding: 2rem 1rem 3rem; color: var(--muted); font-size: .9rem; }
-.socials a { margin-right: .15rem; }
+.icon { height: 1.15em; width: auto; vertical-align: -.2em; }
+.eyebrow .icon { height: 1.6em; vertical-align: -.5em; }
+.host-icon { height: 1em; vertical-align: -.1em; margin-left: .4rem; opacity: .85; }
+.socials { display: flex; align-items: center; gap: .6rem; }
+.socials a { display: inline-flex; }
+.socials a:hover .icon { opacity: .7; }
+.socials .icon { height: 1.5rem; display: block; }
 @media (max-width: 640px) {
   th:nth-child(n+5), td:nth-child(n+5) { display: none; }
   .tagline { flex-basis: 100%; }
@@ -79,6 +88,43 @@ footer { padding: 2rem 1rem 3rem; color: var(--muted); font-size: .9rem; }
     (when (and host (not (equal host "github.com"))) host)))
 
 (defun yes-no (v) (if (truthy v) "yes" "no"))
+
+(defun icon (stem alt &key title (class "icon"))
+  "An inline PNG icon from static/: STEM-light.png, swapped for STEM-dark.png when the
+reader prefers a dark color scheme. ALT is the text equivalent, TITLE the hover text."
+  (spinneret:with-html
+    (:picture
+      (:source :srcset (format nil "~a-dark.png" stem) :media "(prefers-color-scheme: dark)")
+      (:img :class class :src (format nil "~a-light.png" stem) :alt alt :title title
+            :width 128 :height 128))))
+
+(defun yes-no-icon (v &key title)
+  "A check for a truthy V, a cross otherwise."
+  (let ((s (yes-no v))) (icon s s :title title)))
+
+(defun forge-icon (rec)
+  "(values icon-stem label) for the forge hosting REC, or NIL when there is no icon for it."
+  (let ((h (lc (jget rec "host" "github.com"))))
+    (cond ((string= h "github.com") (values "github" "GitHub"))
+          ((string= h "codeberg.org") (values "codeberg" "Codeberg"))
+          ((or (string= h "gitlab.com") (starts-with "gitlab." h)) (values "gitlab" "GitLab"))
+          ((string= h "git.sr.ht") (values "sourcehut" "sourcehut"))
+          ((string= h "bitbucket.org") (values "bitbucket" "Bitbucket")))))
+
+(defun dist-title (dist name)
+  "Hover text for a distribution check: the project name when the repository is in DIST."
+  (and name (format nil "~a project ~a" dist name)))
+
+(defun host-mark (rec)
+  "A small forge icon shown after a repository name in the archive, hover text the host.
+Forges without an icon fall back to the host name."
+  (let ((host (jget rec "host" "github.com")))
+    (multiple-value-bind (stem label) (forge-icon rec)
+      (spinneret:with-html
+        (if stem
+            (icon stem label :title host :class "icon host-icon")
+            (:span :class "host" (format nil " · ~a" host)))))))
+
 (defun fmt-int (n) (format nil "~:d" (if (integerp n) n 0)))
 
 (defun updated-text (iso)
@@ -88,7 +134,11 @@ footer { padding: 2rem 1rem 3rem; color: var(--muted); font-size: .9rem; }
 (defun featured-section (rec)
   (spinneret:with-html
     (:section :class "featured"
-      (:p :class "eyebrow" (format nil "~a · latest pick · ~a" (jget rec "date") (source-text rec)))
+      (:p :class "eyebrow" (format nil "~a · latest pick · " (jget rec "date"))
+        (multiple-value-bind (stem label) (forge-icon rec)
+          (if stem
+              (icon stem label :title (source-text rec))
+              (:span :title (source-text rec) (jget rec "host")))))
       (:h2 (:a :href (jget rec "url") (jget rec "repo")))
       (:p :class "description" (or (jget rec "description") "No description."))
       (let ((home (jget rec "homepage")))
@@ -98,12 +148,14 @@ footer { padding: 2rem 1rem 3rem; color: var(--muted); font-size: .9rem; }
           (when (integerp stars) (:li (format nil "★ ~a" (fmt-int stars)))))
         (:li (format nil "Updated ~a" (updated-text (jget rec "pushed_at"))))
         (:li (format nil "License: ~a" (or (jget rec "license") "none")))
-        (:li (format nil "Tests: ~a" (yes-no (jget rec "has_tests"))))
-        (:li (format nil "CI: ~a" (yes-no (jget rec "has_ci"))))
+        (:li "Tests: " (yes-no-icon (jget rec "has_tests")))
+        (:li "CI: " (yes-no-icon (jget rec "has_ci")))
         (let ((issues (jget rec "open_issues")))
           (when (integerp issues) (:li (format nil "Open issues: ~a" (fmt-int issues)))))
         (let ((ql (jget rec "quicklisp_project")))
-          (if ql (:li (format nil "Quicklisp: ~a" ql)) (:li "Not in Quicklisp")))
+          (:li "Quicklisp: " (yes-no-icon ql :title (dist-title "Quicklisp" ql))))
+        (let ((ul (jget rec "ultralisp_project")))
+          (:li "Ultralisp: " (yes-no-icon ul :title (dist-title "Ultralisp" ul))))
         (let ((host (other-forge-host rec)))
           (when host (:li (format nil "On ~a" host))))
         (when (truthy (jget rec "archived")) (:li :class "warn" "Archived"))
@@ -119,30 +171,33 @@ footer { padding: 2rem 1rem 3rem; color: var(--muted); font-size: .9rem; }
       (:table
         (:thead
           (:tr (:th "Date") (:th "Repository") (:th :class "num" "Stars")
-               (:th "Updated") (:th "Tests") (:th "CI") (:th "License") (:th "Quicklisp")))
+               (:th "Updated") (:th "Tests") (:th "CI") (:th "License") (:th "Quicklisp") (:th "Ultralisp")))
         (:tbody
           (dolist (r records)
             (:tr :id (jget r "date")
               (:td :class "date" (jget r "date"))
               (:td (:a :href (jget r "url") (jget r "repo"))
-                   (let ((host (other-forge-host r)))
-                     (when host (:span :class "host" (format nil " · ~a" host))))
+                   (host-mark r)
                    (:div :class "desc" (or (jget r "description") "")))
               (:td :class "num" (let ((s (jget r "stars"))) (if (integerp s) (fmt-int s) "n/a")))
               (:td :class "updated" :title (or (jget r "pushed_at") "") (date-part (jget r "pushed_at")))
-              (:td (yes-no (jget r "has_tests")))
-              (:td (yes-no (jget r "has_ci")))
+              (:td (yes-no-icon (jget r "has_tests")))
+              (:td (yes-no-icon (jget r "has_ci")))
               (:td (or (jget r "license") "none"))
-              (:td (if (jget r "quicklisp_project") "yes" "no")))))))))
+              (:td (let ((ql (jget r "quicklisp_project")))
+                     (yes-no-icon ql :title (dist-title "Quicklisp" ql))))
+              (:td (let ((ul (jget r "ultralisp_project")))
+                     (yes-no-icon ul :title (dist-title "Ultralisp" ul)))))))))))
 
 (defun socials-line ()
+  "Footer icons linking to the social profiles and the source repository, separated by mid dots."
   (spinneret:with-html
-    (:p :class "socials" "Follow habichuela: "
-      (let ((first t))
-        (dolist (s *socials*)
-          (unless first (:span " · "))
-          (setf first nil)
-          (:a :href (cdr s) :rel "me" (car s)))))))
+    (:p :class "socials"
+      (dolist (s *socials*)
+        (destructuring-bind (label stem url) s
+          (:a :href url :rel "me" :title (format nil "habichuela on ~a" label) (icon stem label)))
+        (:span "·"))
+      (:a :href *repo-url* :title "habichuela on GitHub" (icon "github" "GitHub")))))
 
 (defun index-html (records)
   (let ((latest (first records))

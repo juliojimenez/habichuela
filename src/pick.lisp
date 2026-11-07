@@ -101,7 +101,10 @@ MIN-STARS is a number or a function of the ref. Returns the record or NIL."
                 (log-line "  skipped: ~a" why)
                 (let ((rec (build-snapshot meta paths truncated
                                            :ref ref :date date :source source
-                                           :picked-at (now-iso) :quicklisp-project project)))
+                                           :picked-at (now-iso) :quicklisp-project project
+                                           :ultralisp-project (ultralisp-project ref))))
+                  (when (jget rec "ultralisp_project")
+                    (log-line "  in Ultralisp as ~a" (jget rec "ultralisp_project")))
                   (emit-record rec date dry-run)
                   (return rec)))))))))
 
@@ -199,7 +202,8 @@ problems are logged, and the refresh stops early on authentication or rate-limit
                                          :source (jget rec "source"
                                                        (if (jget rec "quicklisp_project") "quicklisp" "github"))
                                          :picked-at (jget rec "picked_at" (jget rec "fetched_at"))
-                                         :quicklisp-project (jget rec "quicklisp_project"))))
+                                         :quicklisp-project (jget rec "quicklisp_project")
+                                         :ultralisp-project (ultralisp-project ref (jget rec "ultralisp_project")))))
                 (log-line "  ~a: ~:d star~:p, pushed ~a" (ref-label ref)
                           (jget new "stars" 0) (date-part (jget new "pushed_at")))
                 (unless dry-run (save-record new))))
