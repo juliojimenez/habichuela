@@ -9,7 +9,7 @@
   "language": "Common Lisp",
   "license": "MIT",
   "license_from": "forge",
-  "stars": 25,
+  "stars": 26,
   "forks": 2,
   "open_issues": 3,
   "created_at": "2014-05-17T03:46:23Z",
@@ -30,5 +30,5 @@
   "ultralisp_project": "orthecreedence-vom",
   "source": "quicklisp",
   "picked_at": "2026-11-08T14:37:23Z",
-  "fetched_at": "2026-11-08T14:37:27Z"
+  "fetched_at": "2026-11-08T18:49:22Z"
 }
