@@ -46,7 +46,7 @@ jobs:
       # Only the systems locked in ocicl.csv, nothing global.
       OCICL_LOCAL_ONLY: "1"
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Install SBCL
         run: |
