@@ -28,9 +28,9 @@ The workflow passes the Pages base URL; the default is the custom domain."
     (concatenate 'string u "/")))
 
 (defparameter *css* "
-:root { --bg:#fbfaf7; --fg:#1f1d1a; --muted:#6b665e; --line:#e4dfd5; --card:#ffffff; --accent:#8b2635; --chip:#f1ede4; }
+:root { --bg:#fbfaf7; --fg:#1f1d1a; --muted:#6b665e; --line:#e4dfd5; --card:#ffffff; --accent:#8b2635; --chip:#f1ede4; --edge:rgba(31,29,26,.18); }
 @media (prefers-color-scheme: dark) {
-  :root { --bg:#151412; --fg:#ece7dd; --muted:#a39c90; --line:#2c2924; --card:#1d1b18; --accent:#e5717f; --chip:#262320; }
+  :root { --bg:#151412; --fg:#ece7dd; --muted:#a39c90; --line:#2c2924; --card:#1d1b18; --accent:#e5717f; --chip:#262320; --edge:rgba(0,0,0,.6); }
 }
 * { box-sizing: border-box; }
 body { margin: 0; background: var(--bg); color: var(--fg); font: 16px/1.5 system-ui, -apple-system, sans-serif; }
@@ -51,13 +51,24 @@ a { color: var(--accent); }
 .chips .warn { background: var(--accent); color: #fff; }
 .topics, .homepage { color: var(--muted); font-size: .95rem; margin: .25rem 0; overflow-wrap: anywhere; }
 td.systems .sys { display: block; white-space: nowrap; }
-.table-wrap { overflow-x: auto; }
+/* The archive scrolls sideways when it is wider than the page. The Date column stays put,
+   and a shadow appears on a side only while there is more table hidden on that side: the
+   shadows are fixed to the box, the covers in the page color scroll with the content. */
+.table-wrap { --date-col: 6.75rem; overflow-x: auto;
+  background-image:
+    linear-gradient(to right, var(--bg) 30%, transparent), linear-gradient(to left, var(--bg) 30%, transparent),
+    linear-gradient(to right, var(--edge), transparent), linear-gradient(to left, var(--edge), transparent);
+  background-position: left var(--date-col) center, right center, left var(--date-col) center, right center;
+  background-size: 2.5rem 100%, 2.5rem 100%, .9rem 100%, .9rem 100%;
+  background-repeat: no-repeat;
+  background-attachment: local, local, scroll, scroll; }
 table { width: 100%; border-collapse: collapse; font-size: .95rem; }
-th, td { text-align: left; padding: .6rem .5rem; border-bottom: 1px solid var(--line); vertical-align: top; }
+th:first-child, td:first-child { position: sticky; left: 0; z-index: 1; background: var(--bg); width: var(--date-col); min-width: var(--date-col); }
+th, td { text-align: left; padding: .6rem .5rem; border-bottom: 1px solid var(--line); vertical-align: top; white-space: nowrap; }
 th { color: var(--muted); font-weight: 600; font-size: .8rem; text-transform: uppercase; letter-spacing: .06em; }
 td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
-td.date { white-space: nowrap; color: var(--muted); }
-td.updated { white-space: nowrap; }
+td.date { color: var(--muted); }
+.desc { white-space: normal; max-width: 30rem; }
 .desc, .host { color: var(--muted); font-size: .9rem; }
 footer { padding: 2rem 1rem 3rem; color: var(--muted); font-size: .9rem; }
 .icon { height: 1.15em; width: auto; vertical-align: -.2em; }
@@ -67,15 +78,8 @@ footer { padding: 2rem 1rem 3rem; color: var(--muted); font-size: .9rem; }
 .socials a { display: inline-flex; }
 .socials a:hover .icon { opacity: .7; }
 .socials .icon { height: 1.5rem; display: block; }
-@media (max-width: 1024px) {
-  th:nth-child(10), td:nth-child(10) { display: none; }
-}
 @media (max-width: 640px) {
-  th:nth-child(n+5), td:nth-child(n+5) { display: none; }
   .tagline { flex-basis: 100%; }
-}
-@media (max-width: 480px) {
-  th:nth-child(4), td:nth-child(4) { display: none; }
 }
 ")
 
