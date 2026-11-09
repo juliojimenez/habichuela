@@ -49,7 +49,8 @@ a { color: var(--accent); }
 .chips { list-style: none; padding: 0; margin: 0 0 .75rem; display: flex; flex-wrap: wrap; gap: .5rem; }
 .chips li { background: var(--chip); border-radius: 999px; padding: .2rem .75rem; font-size: .9rem; }
 .chips .warn { background: var(--accent); color: #fff; }
-.systems, .topics, .homepage { color: var(--muted); font-size: .95rem; margin: .25rem 0; overflow-wrap: anywhere; }
+.topics, .homepage { color: var(--muted); font-size: .95rem; margin: .25rem 0; overflow-wrap: anywhere; }
+td.systems .sys { display: block; white-space: nowrap; }
 .table-wrap { overflow-x: auto; }
 table { width: 100%; border-collapse: collapse; font-size: .95rem; }
 th, td { text-align: left; padding: .6rem .5rem; border-bottom: 1px solid var(--line); vertical-align: top; }
@@ -66,6 +67,9 @@ footer { padding: 2rem 1rem 3rem; color: var(--muted); font-size: .9rem; }
 .socials a { display: inline-flex; }
 .socials a:hover .icon { opacity: .7; }
 .socials .icon { height: 1.5rem; display: block; }
+@media (max-width: 1024px) {
+  th:nth-child(10), td:nth-child(10) { display: none; }
+}
 @media (max-width: 640px) {
   th:nth-child(n+5), td:nth-child(n+5) { display: none; }
   .tagline { flex-basis: 100%; }
@@ -111,6 +115,17 @@ reader prefers a dark color scheme. ALT is the text equivalent, TITLE the hover 
           ((string= h "git.sr.ht") (values "sourcehut" "sourcehut"))
           ((string= h "bitbucket.org") (values "bitbucket" "Bitbucket")))))
 
+(defparameter *max-systems-in-chip* 4
+  "ASDF systems named in the hero chip before the rest is folded into '+N more'.")
+
+(defun systems-text (systems &optional (limit *max-systems-in-chip*))
+  "SYSTEMS as 'a, b, c', with any beyond LIMIT folded into '+N more'."
+  (let* ((n (length systems))
+         (shown (subseq systems 0 (min limit n))))
+    (if (> n limit)
+        (format nil "~{~a~^, ~} +~d more" shown (- n limit))
+        (format nil "~{~a~^, ~}" shown))))
+
 (defun dist-title (dist name)
   "Hover text for a distribution check: the project name when the repository is in DIST."
   (and name (format nil "~a project ~a" dist name)))
@@ -151,17 +166,19 @@ Forges without an icon fall back to the host name."
         (:li "Tests: " (yes-no-icon (jget rec "has_tests")))
         (:li "CI: " (yes-no-icon (jget rec "has_ci")))
         (let ((issues (jget rec "open_issues")))
-          (when (integerp issues) (:li (format nil "Open issues: ~a" (fmt-int issues)))))
+          (when (integerp issues) (:li (format nil "Open Issues: ~a" (fmt-int issues)))))
         (let ((ql (jget rec "quicklisp_project")))
           (:li "Quicklisp: " (yes-no-icon ql :title (dist-title "Quicklisp" ql))))
         (let ((ul (jget rec "ultralisp_project")))
           (:li "Ultralisp: " (yes-no-icon ul :title (dist-title "Ultralisp" ul))))
+        (let ((systems (to-list (jget rec "asd_systems"))))
+          (when systems
+            (:li :title (when (> (length systems) *max-systems-in-chip*) (format nil "~{~a~^, ~}" systems))
+              (format nil "ASDF Systems: ~a" (systems-text systems)))))
         (let ((host (other-forge-host rec)))
           (when host (:li (format nil "On ~a" host))))
         (when (truthy (jget rec "archived")) (:li :class "warn" "Archived"))
         (when (truthy (jget rec "missing")) (:li :class "warn" "No longer online")))
-      (let ((systems (to-list (jget rec "asd_systems"))))
-        (when systems (:p :class "systems" (format nil "ASDF systems: ~{~a~^, ~}" systems))))
       (let ((topics (to-list (jget rec "topics"))))
         (when topics (:p :class "topics" (format nil "Topics: ~{~a~^, ~}" topics)))))))
 
@@ -171,7 +188,8 @@ Forges without an icon fall back to the host name."
       (:table
         (:thead
           (:tr (:th "Date") (:th "Repository") (:th :class "num" "Stars")
-               (:th "Updated") (:th "Tests") (:th "CI") (:th "License") (:th "Quicklisp") (:th "Ultralisp")))
+               (:th "Updated") (:th "Tests") (:th "CI") (:th "License") (:th "Quicklisp") (:th "Ultralisp")
+               (:th "ASDF Systems")))
         (:tbody
           (dolist (r records)
             (:tr :id (jget r "date")
@@ -187,7 +205,12 @@ Forges without an icon fall back to the host name."
               (:td (let ((ql (jget r "quicklisp_project")))
                      (yes-no-icon ql :title (dist-title "Quicklisp" ql))))
               (:td (let ((ul (jget r "ultralisp_project")))
-                     (yes-no-icon ul :title (dist-title "Ultralisp" ul)))))))))))
+                     (yes-no-icon ul :title (dist-title "Ultralisp" ul))))
+              (:td :class "systems"
+                   (let ((systems (to-list (jget r "asd_systems"))))
+                     (if systems
+                         (dolist (name systems) (:span :class "sys" name))
+                         "none"))))))))))
 
 (defun socials-line ()
   "Footer icons linking to the social profiles and the source repository, separated by mid dots."
