@@ -106,7 +106,7 @@ jobs:
         env:
           HABICHUELA_BASE_URL: ${{ steps.pages.outputs.base_url || 'https://habichue.la' }}/
 
-      - uses: actions/upload-pages-artifact@v3
+      - uses: actions/upload-pages-artifact@v5
         with:
           path: site
 
