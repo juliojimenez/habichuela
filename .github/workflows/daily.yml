@@ -73,7 +73,7 @@ jobs:
 
       - name: Read the Pages configuration (custom domain and base URL)
         id: pages
-        uses: actions/configure-pages@v5
+        uses: actions/configure-pages@v6
         continue-on-error: true
 
       - name: Fetch the Quicklisp projects list
