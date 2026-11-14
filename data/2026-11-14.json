@@ -1,0 +1,40 @@
+{
+  "date": "2026-11-14",
+  "repo": "sebbb/cl3",
+  "forge": "gitlab",
+  "host": "gitlab.com",
+  "url": "https://gitlab.com/sebbb/cl3",
+  "description": "A modernized and enhanced dialect of Common Lisp designed to make Lisp's inherent power, flexibility, and elegance more easily accessible to Lispers and non-Lispers alike.",
+  "homepage": null,
+  "language": "Common Lisp",
+  "license": "Apache-2.0",
+  "license_from": "forge",
+  "stars": 0,
+  "forks": 0,
+  "open_issues": 0,
+  "created_at": "2026-06-11T22:23:28.313Z",
+  "pushed_at": "2026-06-21T22:15:02.476Z",
+  "archived": false,
+  "fork": false,
+  "mirror": false,
+  "default_branch": "trunk",
+  "topics": [
+    "CL3",
+    "common-lisp",
+    "lisp",
+    "metalinguistic-programming",
+    "programming-language"
+  ],
+  "has_readme": true,
+  "has_tests": false,
+  "has_ci": false,
+  "asd_systems": [
+    "cl3"
+  ],
+  "tree_truncated": false,
+  "quicklisp_project": null,
+  "ultralisp_project": null,
+  "source": "gitlab",
+  "picked_at": "2026-11-14T00:54:10Z",
+  "fetched_at": "2026-11-14T00:54:19Z"
+}
