@@ -49,7 +49,7 @@ a { color: var(--accent); }
 .chips { list-style: none; padding: 0; margin: 0 0 .75rem; display: flex; flex-wrap: wrap; gap: .5rem; }
 .chips li { background: var(--chip); border-radius: 999px; padding: .2rem .75rem; font-size: .9rem; }
 .chips .warn { background: var(--accent); color: #fff; }
-.topics, .homepage { color: var(--muted); font-size: .95rem; margin: .25rem 0; overflow-wrap: anywhere; }
+.homepage { color: var(--muted); font-size: .95rem; margin: .25rem 0; overflow-wrap: anywhere; }
 td.systems .sys { display: block; white-space: nowrap; }
 /* The archive scrolls sideways when it is wider than the page. The Date column stays put,
    and a shadow appears on a side only while there is more table hidden on that side: the
@@ -89,11 +89,6 @@ footer { padding: 2rem 1rem 3rem; color: var(--muted); font-size: .9rem; }
           ((equal s "gitlab") "found by GitLab search")
           ((equal s "codeberg") "found by Codeberg search")
           (t "from the Quicklisp projects list"))))
-
-(defun other-forge-host (rec)
-  "The host when the repository is not on GitHub, else NIL."
-  (let ((host (jget rec "host")))
-    (when (and host (not (equal host "github.com"))) host)))
 
 (defun yes-no (v) (if (truthy v) "yes" "no"))
 
@@ -179,12 +174,8 @@ Forges without an icon fall back to the host name."
           (when systems
             (:li :title (when (> (length systems) *max-systems-in-chip*) (format nil "~{~a~^, ~}" systems))
               (format nil "ASDF Systems: ~a" (systems-text systems)))))
-        (let ((host (other-forge-host rec)))
-          (when host (:li (format nil "On ~a" host))))
         (when (truthy (jget rec "archived")) (:li :class "warn" "Archived"))
-        (when (truthy (jget rec "missing")) (:li :class "warn" "No longer online")))
-      (let ((topics (to-list (jget rec "topics"))))
-        (when topics (:p :class "topics" (format nil "Topics: ~{~a~^, ~}" topics)))))))
+        (when (truthy (jget rec "missing")) (:li :class "warn" "No longer online"))))))
 
 (defun archive-table (records)
   (spinneret:with-html
