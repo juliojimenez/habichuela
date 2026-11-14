@@ -9,7 +9,7 @@
   "language": "Common Lisp",
   "license": "Apache-2.0",
   "license_from": "forge",
-  "stars": 0,
+  "stars": 1,
   "forks": 0,
   "open_issues": 0,
   "created_at": "2026-06-11T22:23:28.313Z",
@@ -36,5 +36,5 @@
   "ultralisp_project": null,
   "source": "gitlab",
   "picked_at": "2026-11-14T00:54:10Z",
-  "fetched_at": "2026-11-14T15:19:44Z"
+  "fetched_at": "2026-11-14T19:08:12Z"
 }
