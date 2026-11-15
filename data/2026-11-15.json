@@ -9,7 +9,7 @@
   "language": "Common Lisp",
   "license": "BSD",
   "license_from": "asd",
-  "stars": 4,
+  "stars": 5,
   "forks": 1,
   "open_issues": 0,
   "created_at": "2015-01-07T18:24:36Z",
@@ -30,5 +30,5 @@
   "ultralisp_project": "MartinEnders-hl7-client",
   "source": "quicklisp",
   "picked_at": "2026-11-15T16:28:14Z",
-  "fetched_at": "2026-11-15T16:28:26Z"
+  "fetched_at": "2026-11-15T19:45:30Z"
 }
