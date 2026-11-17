@@ -9,7 +9,7 @@
   "language": "Common Lisp",
   "license": "GPL-3.0",
   "license_from": "forge",
-  "stars": 4,
+  "stars": 5,
   "forks": 2,
   "open_issues": 1,
   "created_at": "2021-02-15T15:12:38.147Z",
@@ -30,5 +30,5 @@
   "ultralisp_project": null,
   "source": "quicklisp",
   "picked_at": "2026-11-16T23:23:03Z",
-  "fetched_at": "2026-11-16T23:23:15Z"
+  "fetched_at": "2026-11-17T02:55:26Z"
 }
