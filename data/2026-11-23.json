@@ -1,0 +1,41 @@
+{
+  "date": "2026-11-23",
+  "repo": "jl2/cl-libre-translate",
+  "forge": "github",
+  "host": "github.com",
+  "url": "https://github.com/jl2/cl-libre-translate",
+  "description": "Common Lisp package for human language translation using Libre Translate.",
+  "homepage": null,
+  "language": "Common Lisp",
+  "license": "ISC",
+  "license_from": "forge",
+  "stars": 1,
+  "forks": 0,
+  "open_issues": 1,
+  "created_at": "2024-10-04T07:32:06Z",
+  "pushed_at": "2026-06-07T20:17:59Z",
+  "archived": false,
+  "fork": false,
+  "mirror": false,
+  "default_branch": "master",
+  "topics": [
+    "languages",
+    "libre",
+    "lisp",
+    "translate",
+    "translation"
+  ],
+  "has_readme": true,
+  "has_tests": true,
+  "has_ci": false,
+  "asd_systems": [
+    "cl-libre-translate",
+    "cl-libre-translate.test"
+  ],
+  "tree_truncated": false,
+  "quicklisp_project": "cl-libre-translate",
+  "ultralisp_project": null,
+  "source": "quicklisp",
+  "picked_at": "2026-11-23T00:50:24Z",
+  "fetched_at": "2026-11-23T00:50:41Z"
+}
