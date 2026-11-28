@@ -1,0 +1,37 @@
+{
+  "date": "2026-11-28",
+  "repo": "AaronChen0/primecount",
+  "forge": "github",
+  "host": "github.com",
+  "url": "https://github.com/AaronChen0/primecount",
+  "description": "Prime counting of sublinear complexity in Common Lisp.",
+  "homepage": null,
+  "language": "Common Lisp",
+  "license": "MIT",
+  "license_from": "forge",
+  "stars": 3,
+  "forks": 0,
+  "open_issues": 1,
+  "created_at": "2020-02-15T07:44:20Z",
+  "pushed_at": "2020-02-16T05:42:20Z",
+  "archived": false,
+  "fork": false,
+  "mirror": false,
+  "default_branch": "master",
+  "topics": [
+    "common-lisp",
+    "primecount"
+  ],
+  "has_readme": true,
+  "has_tests": false,
+  "has_ci": false,
+  "asd_systems": [
+    "primecount"
+  ],
+  "tree_truncated": false,
+  "quicklisp_project": "primecount",
+  "ultralisp_project": null,
+  "source": "quicklisp",
+  "picked_at": "2026-11-28T02:40:48Z",
+  "fetched_at": "2026-11-28T02:41:08Z"
+}
